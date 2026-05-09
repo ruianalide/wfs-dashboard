@@ -48,9 +48,8 @@ def get_conn():
             conn.execute(...)
     """
     if _BACKEND == "postgres":
-        import psycopg2
-        import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
+        import psycopg
+        conn = psycopg.connect(DATABASE_URL)
         try:
             yield conn
             conn.commit()
@@ -76,13 +75,12 @@ def get_conn():
 def read_sql(query: str, params=None) -> pd.DataFrame:
     """
     Execute a SELECT and return a DataFrame.
-    Handles the SQLite vs psycopg2 parameter style difference automatically.
+    Handles the SQLite vs psycopg parameter style difference automatically.
     """
     if _BACKEND == "postgres":
-        import psycopg2
-        # psycopg2 uses %s placeholders; replace ? with %s for compatibility
+        import psycopg
         query = query.replace("?", "%s")
-        with get_conn() as conn:
+        with psycopg.connect(DATABASE_URL) as conn:
             return pd.read_sql(query, conn, params=params)
     else:
         with get_conn() as conn:
@@ -100,9 +98,6 @@ def execute(query: str, params=None, many: bool = False):
     """
     if _BACKEND == "postgres":
         query = query.replace("?", "%s")
-        # PostgreSQL uses ON CONFLICT ... DO UPDATE (same syntax as SQLite UPSERT)
-        # but does NOT support "ON CONFLICT ... DO UPDATE SET col = excluded.col"
-        # with the "excluded" alias — it does, actually. Both dialects are compatible.
 
     with get_conn() as conn:
         cursor = conn.cursor()
