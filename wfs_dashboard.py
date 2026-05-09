@@ -267,11 +267,24 @@ def load_fixtures():
 
 @st.cache_data(ttl=300)
 def load_feature_importance():
-    """Load feature importance history."""
-    path = os.path.join(SAVE_FOLDER, 'feature_importance_history.json')
+    """Load feature importance history from database."""
     try:
-        with open(path, 'r') as f:
-            return json.load(f)
+        df = read_sql("SELECT * FROM feature_importance_history")
+        if df.empty:
+            return {}
+        # Reconstruct the nested dict: {gw: {pos: {feature: importance}}}
+        history = {}
+        for _, row in df.iterrows():
+            gw = row['gw']
+            pos = row['position']
+            feat = row['feature']
+            imp = float(row['importance'])
+            if gw not in history:
+                history[gw] = {}
+            if pos not in history[gw]:
+                history[gw][pos] = {}
+            history[gw][pos][feat] = imp
+        return history
     except Exception:
         return {}
 
