@@ -267,24 +267,31 @@ def load_fixtures():
 
 @st.cache_data(ttl=300)
 def load_feature_importance():
-    """Load feature importance history from database."""
+    """Load feature importance history from database, fallback to local JSON."""
     try:
         df = read_sql("SELECT * FROM feature_importance_history")
-        if df.empty:
-            return {}
-        # Reconstruct the nested dict: {gw: {pos: {feature: importance}}}
-        history = {}
-        for _, row in df.iterrows():
-            gw = row['gw']
-            pos = row['position']
-            feat = row['feature']
-            imp = float(row['importance'])
-            if gw not in history:
-                history[gw] = {}
-            if pos not in history[gw]:
-                history[gw][pos] = {}
-            history[gw][pos][feat] = imp
-        return history
+        if not df.empty:
+            # Reconstruct the nested dict: {gw: {pos: {feature: importance}}}
+            history = {}
+            for _, row in df.iterrows():
+                gw = row['gw']
+                pos = row['position']
+                feat = row['feature']
+                imp = float(row['importance'])
+                if gw not in history:
+                    history[gw] = {}
+                if pos not in history[gw]:
+                    history[gw][pos] = {}
+                history[gw][pos][feat] = imp
+            return history
+    except Exception:
+        pass
+
+    # Fallback: read from local JSON file (local development)
+    path = os.path.join(SAVE_FOLDER, 'feature_importance_history.json')
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
     except Exception:
         return {}
 
