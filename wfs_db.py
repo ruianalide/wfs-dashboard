@@ -131,26 +131,35 @@ def _extract_table(query: str) -> str:
 
 
 def _supabase_read_sql(query: str, params=None) -> pd.DataFrame:
-    """Read data from Supabase using the REST API."""
+    """Read data from Supabase using the REST API with automatic pagination."""
     sb = _get_supabase()
     table = _extract_table(query)
 
-    # Determine ORDER BY if present
-    import re
-    order_match = re.search(r'ORDER BY\s+(.+?)(?:LIMIT|$)', query, re.IGNORECASE)
+    # Fetch all rows using pagination (Supabase default limit is 1000)
+    PAGE_SIZE = 1000
+    all_data = []
+    offset = 0
 
-    response = sb.table(table).select("*").execute()
-    data = response.data
+    while True:
+        response = sb.table(table).select("*").range(offset, offset + PAGE_SIZE - 1).execute()
+        batch = response.data
+        if not batch:
+            break
+        all_data.extend(batch)
+        if len(batch) < PAGE_SIZE:
+            break
+        offset += PAGE_SIZE
 
-    if not data:
+    if not all_data:
         return pd.DataFrame()
 
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(all_data)
 
     # Apply ORDER BY if present
+    import re
+    order_match = re.search(r'ORDER BY\s+(.+?)(?:LIMIT|$)', query, re.IGNORECASE)
     if order_match:
         order_str = order_match.group(1).strip()
-        # Parse "col1, col2 DESC" etc.
         order_parts = [p.strip() for p in order_str.split(',')]
         cols = []
         ascending = []
