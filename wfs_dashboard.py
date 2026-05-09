@@ -28,15 +28,15 @@ SAVE_FOLDER = os.getenv(
     r"C:\Users\ruiana\OneDrive - amazon.com\Attachments\Personal\Fantasy"
 )
 
-# Liga Portugal colors
+# Light mode color palette
 COLORS = {
     'primary': '#00235A',
     'accent': '#E10014',
-    'bg_dark': '#0a1628',
-    'bg_card': '#0f2040',
-    'bg_card_border': '#1a3050',
-    'text': '#FFFFFF',
-    'text_muted': '#8899bb',
+    'bg_main': '#f8fafc',
+    'bg_card': '#ffffff',
+    'bg_card_border': '#e2e8f0',
+    'text': '#1e293b',
+    'text_muted': '#64748b',
     'green': '#059669',
     'yellow': '#d97706',
     'red': '#dc2626',
@@ -59,145 +59,97 @@ POSITION_COLORS = {
 # ============================================
 st.markdown("""
 <style>
-    /* Force all sidebar text white */
-    section[data-testid="stSidebar"] * {
-        color: #FFFFFF !important;
+    /* ── Global ── */
+    .stApp { background-color: #f8fafc; }
+    .stApp, .stApp p, .stApp span, .stApp div, .stApp h1, .stApp h2, .stApp h3 {
+        color: #1e293b;
     }
+
+    /* ── Sidebar ── */
+    [data-testid="stSidebar"] { background-color: #00235A !important; }
+    section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
     section[data-testid="stSidebar"] label p {
-        color: #FFFFFF !important;
-        font-size: 17px !important;
-        line-height: 1.1 !important;
+        font-size: 15px !important;
+        line-height: 1.2 !important;
         margin: 0 !important;
         padding: 0 !important;
     }
-
-    /* Compact sidebar radio buttons - big text, tight spacing */
     section[data-testid="stSidebar"] .stRadio label {
-        padding: 1px 0 !important;
+        padding: 6px 0 !important;
         margin: 0 !important;
         min-height: 0 !important;
-        line-height: 1.2 !important;
     }
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] {
-        gap: 0px !important;
-    }
-    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label {
-        padding-top: 7px !important;
-        padding-bottom: 7px !important;
-    }
-
-    /* Hide sidebar scrollbar but allow overflow if needed */
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] { gap: 0px !important; }
     section[data-testid="stSidebar"] > div:first-child {
         overflow-y: auto !important;
         scrollbar-width: none !important;
-        -ms-overflow-style: none !important;
     }
-    section[data-testid="stSidebar"] > div:first-child::-webkit-scrollbar {
-        display: none !important;
-    }
+    section[data-testid="stSidebar"] > div:first-child::-webkit-scrollbar { display: none !important; }
+    [data-testid="stSidebar"] .stRadio label:hover { color: #fca5a5 !important; }
 
-    /* Reduce sidebar padding */
-    section[data-testid="stSidebar"] > div:first-child > div {
-        padding-top: 1rem !important;
-    }
-
-
-
-    /* Main background */
-    .stApp {
-        background-color: #0a1628;
-    }
-
-
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: #00235A;
-    }
-    [data-testid="stSidebar"] .stMarkdown p,
-    [data-testid="stSidebar"] .stMarkdown li,
-    [data-testid="stSidebar"] label {
-        color: #FFFFFF !important;
-        font-size: 16px !important;
-    }
-
-    /* Sidebar radio buttons */
-    [data-testid="stSidebar"] .stRadio label {
-        color: #FFFFFF !important;
-        font-size: 17px !important;
-        padding: 6px 0 !important;
-    }
-    [data-testid="stSidebar"] .stRadio label:hover {
-        color: #E10014 !important;
-    }
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-checked="true"] {
-        color: #E10014 !important;
-        font-weight: bold !important;
-    }
-
-    /* Cards */
+    /* ── Cards ── */
     .metric-card {
-        background-color: #0f2040;
-        border: 1px solid #1a3050;
-        border-radius: 10px;
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
         padding: 20px;
         margin: 5px 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
-    .metric-value {
-        font-size: 32px;
-        font-weight: bold;
-        color: #FFFFFF;
-    }
-    .metric-label {
-        font-size: 14px;
-        color: #8899bb;
-    }
+    .metric-value { font-size: 32px; font-weight: bold; color: #1e293b; }
+    .metric-label { font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
 
-    /* Position badges */
-    .pos-gk { background-color: #2563eb; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .pos-def { background-color: #059669; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .pos-mid { background-color: #d97706; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .pos-att { background-color: #E10014; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    /* ── Position badges ── */
+    .pos-gk  { background-color: #2563eb; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .pos-def { background-color: #059669; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .pos-mid { background-color: #d97706; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .pos-att { background-color: #E10014; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
 
-    /* Confidence badges */
-    .conf-high { background-color: #059669; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .conf-medium { background-color: #d97706; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-    .conf-low { background-color: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    /* ── Confidence badges ── */
+    .conf-high   { background-color: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .conf-medium { background-color: #fef9c3; color: #854d0e; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .conf-low    { background-color: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
 
-    /* Table styling */
-    .dataframe { color: #FFFFFF !important; }
-
-    /* Header */
+    /* ── Header ── */
     .main-header {
-        background: linear-gradient(90deg, #00235A 0%, #E10014 100%);
-        padding: 15px 25px;
-        border-radius: 10px;
-        margin-bottom: 20px;
+        background: linear-gradient(135deg, #00235A 0%, #E10014 100%);
+        padding: 20px 28px;
+        border-radius: 14px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(0,35,90,0.15);
     }
-    .main-header h1 {
-        color: white !important;
-        margin: 0;
-        font-size: 28px;
-    }
-    .main-header p {
-        color: #ffcccc;
-        margin: 0;
-        font-size: 14px;
-    }
+    .main-header h1 { color: white !important; margin: 0; font-size: 26px; font-weight: 700; }
+    .main-header p  { color: rgba(255,255,255,0.85) !important; margin: 4px 0 0 0; font-size: 14px; }
+    .main-header * { color: white !important; }
 
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
+    /* ── Tabs ── */
+    .stTabs [data-baseweb="tab-list"] { gap: 6px; background: transparent; }
     .stTabs [data-baseweb="tab"] {
-        background-color: #0f2040;
-        color: #8899bb;
+        background-color: #f1f5f9;
+        color: #64748b;
         border-radius: 8px;
         padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        font-weight: 500;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #E10014 !important;
+        background-color: #00235A !important;
         color: white !important;
+        border-color: #00235A !important;
     }
+
+    /* ── Dataframe ── */
+    .dataframe { color: #1e293b !important; }
+
+    /* ── Buttons ── */
+    .stButton button {
+        background-color: #00235A !important;
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+        font-weight: 600 !important;
+    }
+    .stButton button:hover { background-color: #E10014 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -321,7 +273,7 @@ def conf_badge(confidence):
 
 def metric_card(label, value, subtitle=""):
     """Return HTML for a metric card."""
-    sub_html = f'<div style="font-size:12px;color:#4ade80;margin-top:4px;">{subtitle}</div>' if subtitle else ''
+    sub_html = f'<div style="font-size:12px;color:#059669;margin-top:4px;">{subtitle}</div>' if subtitle else ''
     return f"""
     <div class="metric-card">
         <div class="metric-label">{label}</div>
@@ -360,7 +312,7 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-    st.markdown(f"<small style='color:#8899bb;'>Updated: {datetime.now().strftime('%d %b')}</small>", unsafe_allow_html=True)
+    st.markdown(f"<small style='color:#64748b;'>Updated: {datetime.now().strftime('%d %b')}</small>", unsafe_allow_html=True)
 
 # ============================================
 # PAGE: OVERVIEW
@@ -408,14 +360,14 @@ if page == "📊 Overview":
                 conf_color = COLORS['green'] if row['confidence'] == 'High' else COLORS['yellow'] if row['confidence'] == 'Medium' else COLORS['red']
 
                 st.markdown(f"""
-                <div style="display:flex;align-items:center;padding:8px 12px;margin:4px 0;background:#0f2040;border-radius:8px;border-left:3px solid {pos_color};">
-                    <div style="width:35px;font-weight:bold;color:#8899bb;">#{int(row['rank'])}</div>
+                <div style="display:flex;align-items:center;padding:8px 12px;margin:4px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;border-left:3px solid {pos_color};">
+                    <div style="width:35px;font-weight:bold;color:#64748b;">#{int(row['rank'])}</div>
                     <div style="flex:1;">
-                        <span style="font-weight:bold;color:white;">{row['player_name']}</span>
+                        <span style="font-weight:bold;color:#1e293b;">{row['player_name']}</span>
                         <span style="color:{pos_color};font-size:12px;margin-left:8px;">{row['position']}</span>
                     </div>
-                    <div style="width:120px;color:#8899bb;font-size:13px;">{row.get('opponent', '')}</div>
-                    <div style="width:60px;font-weight:bold;color:#4ade80;font-size:18px;">{row['predicted_pts']}</div>
+                    <div style="width:120px;color:#64748b;font-size:13px;">{row.get('opponent', '')}</div>
+                    <div style="width:60px;font-weight:bold;color:#059669;font-size:18px;">{row['predicted_pts']}</div>
                     <div style="width:60px;"><span style="background:{conf_color};color:white;padding:2px 8px;border-radius:4px;font-size:11px;">{row['confidence']}</span></div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -427,7 +379,7 @@ if page == "📊 Overview":
                 pos_color = POSITION_COLORS.get(pos, '#6b7280')
                 st.markdown(f"<span style='background:{pos_color};color:white;padding:3px 10px;border-radius:4px;font-weight:bold;'>{pos}</span>", unsafe_allow_html=True)
                 for _, p in pos_picks.iterrows():
-                    st.markdown(f"<div style='padding:2px 0 2px 15px;color:white;'>{p['player_name']} <span style='color:#4ade80;font-weight:bold;'>({p['predicted_pts']})</span> <span style='color:#8899bb;font-size:12px;'>vs {p.get('opponent', '')}</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='padding:2px 0 2px 15px;color:#1e293b;'>{p['player_name']} <span style='color:#059669;font-weight:bold;'>({p['predicted_pts']})</span> <span style='color:#64748b;font-size:12px;'>vs {p.get('opponent', '')}</span></div>", unsafe_allow_html=True)
                 st.markdown("")
 
         # League mini-table
@@ -439,13 +391,13 @@ if page == "📊 Overview":
 
             for i, (_, row) in enumerate(current.iterrows()):
                 medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else f"#{i+1}"
-                bg = "#1a3050" if i < 3 else "#0f2040"
+                bg = "#dbeafe" if i < 3 else "#ffffff;border:1px solid #e2e8f0"
                 st.markdown(f"""
                 <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:{bg};border-radius:8px;">
                     <div style="width:40px;font-size:16px;">{medal}</div>
-                    <div style="flex:1;color:white;font-weight:bold;">{row['team_name']}</div>
-                    <div style="width:80px;color:#4ade80;font-weight:bold;font-size:16px;">{int(row['total_points'])} pts</div>
-                    <div style="width:70px;color:#8899bb;font-size:13px;">GW: {int(row['gw_points'])}</div>
+                    <div style="flex:1;color:#1e293b;font-weight:bold;">{row['team_name']}</div>
+                    <div style="width:80px;color:#059669;font-weight:bold;font-size:16px;">{int(row['total_points'])} pts</div>
+                    <div style="width:70px;color:#64748b;font-size:13px;">GW: {int(row['gw_points'])}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -542,16 +494,16 @@ elif page == "👥 Player Comparison":
                 if p_data is not None:
                     pos_color = POSITION_COLORS.get(p_data['position'], '#6b7280')
                     st.markdown(f"""
-                    <div style="background:#0f2040;border-radius:10px;padding:20px;border-top:3px solid {pos_color};">
-                        <h3 style="color:white;margin:0;">{player_name}</h3>
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;border-top:3px solid {pos_color};">
+                        <h3 style="color:#1e293b;margin:0;">{player_name}</h3>
                         <p style="color:{pos_color};margin:0;">{p_data['position']} | {p_data['team']}</p>
-                        <p style="color:#8899bb;">vs {p_data.get('opponent', 'N/A')}</p>
-                        <h2 style="color:#4ade80;margin:10px 0;">{p_data['predicted_pts']} pts</h2>
-                        <p style="color:#8899bb;margin:2px 0;">Form (3): {p_data['form_last_3']}</p>
-                        <p style="color:#8899bb;margin:2px 0;">Form (5): {p_data['form_last_5']}</p>
-                        <p style="color:#8899bb;margin:2px 0;">Mins (3): {p_data['mins_last_3']}</p>
-                        <p style="color:#8899bb;margin:2px 0;">Value: €{p_data['value']}M</p>
-                        <p style="color:#8899bb;margin:2px 0;">Pts/€M: {p_data['pts_per_value']}</p>
+                        <p style="color:#64748b;">vs {p_data.get('opponent', 'N/A')}</p>
+                        <h2 style="color:#059669;margin:10px 0;">{p_data['predicted_pts']} pts</h2>
+                        <p style="color:#64748b;margin:2px 0;">Form (3): {p_data['form_last_3']}</p>
+                        <p style="color:#64748b;margin:2px 0;">Form (5): {p_data['form_last_5']}</p>
+                        <p style="color:#64748b;margin:2px 0;">Mins (3): {p_data['mins_last_3']}</p>
+                        <p style="color:#64748b;margin:2px 0;">Value: €{p_data['value']}M</p>
+                        <p style="color:#64748b;margin:2px 0;">Pts/€M: {p_data['pts_per_value']}</p>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -577,12 +529,12 @@ elif page == "👥 Player Comparison":
                 ))
 
         fig.update_layout(
-            plot_bgcolor='#0a1628',
-            paper_bgcolor='#0a1628',
-            font_color='#FFFFFF',
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_color='#1e293b',
             xaxis_title='Gameweek',
             yaxis_title='Points',
-            legend=dict(bgcolor='#0f2040'),
+            legend=dict(bgcolor='#f8fafc'),
             height=400
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -626,13 +578,13 @@ elif page == "💰 Value Picks":
                 st.markdown(f"### <span style='color:{pos_color};'>{pos}</span>", unsafe_allow_html=True)
                 for _, row in pos_data.iterrows():
                     st.markdown(f"""
-                    <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#0f2040;border-radius:8px;">
-                        <div style="flex:1;color:white;font-weight:bold;">{row['player_name']}</div>
-                        <div style="width:100px;color:#8899bb;">{row['team']}</div>
-                        <div style="width:100px;color:#8899bb;">vs {row.get('opponent', '')}</div>
-                        <div style="width:60px;color:#4ade80;font-weight:bold;">{row['predicted_pts']}</div>
-                        <div style="width:60px;color:#8899bb;">€{row['value']}M</div>
-                        <div style="width:80px;color:#fbbf24;font-weight:bold;">{row['pts_per_value']} pts/€M</div>
+                    <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div style="flex:1;color:#1e293b;font-weight:bold;">{row['player_name']}</div>
+                        <div style="width:100px;color:#64748b;">{row['team']}</div>
+                        <div style="width:100px;color:#64748b;">vs {row.get('opponent', '')}</div>
+                        <div style="width:60px;color:#059669;font-weight:bold;">{row['predicted_pts']}</div>
+                        <div style="width:60px;color:#64748b;">€{row['value']}M</div>
+                        <div style="width:80px;color:#d97706;font-weight:bold;">{row['pts_per_value']} pts/€M</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -658,9 +610,9 @@ elif page == "📅 All Gameweeks":
         if not player_preds.empty:
             first = player_preds.iloc[0]
             st.markdown(f"""
-            <div style="background:#0f2040;border-radius:10px;padding:20px;margin:10px 0;">
-                <h3 style="color:white;">{selected_player}</h3>
-                <p style="color:#8899bb;">{first['position']} | {first['team']} | €{first['value']}M</p>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin:10px 0;">
+                <h3 style="color:#1e293b;">{selected_player}</h3>
+                <p style="color:#64748b;">{first['position']} | {first['team']} | €{first['value']}M</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -674,9 +626,9 @@ elif page == "📅 All Gameweeks":
                 textposition='outside'
             ))
             fig.update_layout(
-                plot_bgcolor='#0a1628',
-                paper_bgcolor='#0a1628',
-                font_color='#FFFFFF',
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font_color='#1e293b',
                 yaxis_title='Predicted Points',
                 height=350
             )
@@ -687,10 +639,10 @@ elif page == "📅 All Gameweeks":
             for _, row in player_preds.iterrows():
                 conf_color = COLORS['green'] if row['confidence'] == 'High' else COLORS['yellow'] if row['confidence'] == 'Medium' else COLORS['red']
                 st.markdown(f"""
-                <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#0f2040;border-radius:8px;">
-                    <div style="width:60px;font-weight:bold;color:white;">GW {int(row['gameweek'])}</div>
-                    <div style="flex:1;color:#8899bb;">vs {row.get('opponent', 'TBD')}</div>
-                    <div style="width:80px;color:#4ade80;font-weight:bold;font-size:18px;">{row['predicted_pts']}</div>
+                <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div style="width:60px;font-weight:bold;color:#1e293b;">GW {int(row['gameweek'])}</div>
+                    <div style="flex:1;color:#64748b;">vs {row.get('opponent', 'TBD')}</div>
+                    <div style="width:80px;color:#059669;font-weight:bold;font-size:18px;">{row['predicted_pts']}</div>
                     <div><span style="background:{conf_color};color:white;padding:2px 8px;border-radius:4px;font-size:11px;">{row['confidence']}</span></div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -728,9 +680,9 @@ elif page == "📈 Feature Importance":
                             marker_color=POSITION_COLORS.get(pos, '#2563eb')
                         ))
                         fig.update_layout(
-                            plot_bgcolor='#0a1628',
-                            paper_bgcolor='#0a1628',
-                            font_color='#FFFFFF',
+                            plot_bgcolor='white',
+                            paper_bgcolor='white',
+                            font_color='#1e293b',
                             xaxis_title='Importance (%)',
                             yaxis=dict(autorange="reversed"),
                             height=500
@@ -811,20 +763,20 @@ elif page == "🚨 Alerts":
             st.subheader("🔥 Hot Streaks")
             for h in hot_streaks[:10]:
                 st.markdown(f"""
-                <div style="padding:8px 12px;margin:3px 0;background:#0f2040;border-radius:8px;border-left:3px solid #059669;">
-                    <span style="color:white;font-weight:bold;">{h['player']}</span><br/>
-                    <span style="color:#4ade80;">avg {h['pts_3']} pts last 3</span>
-                    <span style="color:#8899bb;"> (season {h['pts_10']})</span>
+                <div style="padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;border-left:3px solid #059669;">
+                    <span style="color:#1e293b;font-weight:bold;">{h['player']}</span><br/>
+                    <span style="color:#059669;">avg {h['pts_3']} pts last 3</span>
+                    <span style="color:#64748b;"> (season {h['pts_10']})</span>
                 </div>
                 """, unsafe_allow_html=True)
 
             st.subheader("❄️ Cold Streaks")
             for c in cold_streaks[:10]:
                 st.markdown(f"""
-                <div style="padding:8px 12px;margin:3px 0;background:#0f2040;border-radius:8px;border-left:3px solid #dc2626;">
-                    <span style="color:white;font-weight:bold;">{c['player']}</span><br/>
+                <div style="padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;border-left:3px solid #dc2626;">
+                    <span style="color:#1e293b;font-weight:bold;">{c['player']}</span><br/>
                     <span style="color:#f87171;">avg {c['pts_3']} pts last 3</span>
-                    <span style="color:#8899bb;"> (season {c['pts_10']})</span>
+                    <span style="color:#64748b;"> (season {c['pts_10']})</span>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -832,10 +784,10 @@ elif page == "🚨 Alerts":
             st.subheader("⚠️ Minutes Drops")
             for m in mins_drops[:10]:
                 st.markdown(f"""
-                <div style="padding:8px 12px;margin:3px 0;background:#0f2040;border-radius:8px;border-left:3px solid #d97706;">
-                    <span style="color:white;font-weight:bold;">{m['player']}</span><br/>
+                <div style="padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;border-left:3px solid #d97706;">
+                    <span style="color:#1e293b;font-weight:bold;">{m['player']}</span><br/>
                     <span style="color:#fbbf24;">avg {int(m['mins_3'])} mins</span>
-                    <span style="color:#8899bb;"> (was {int(m['mins_5'])})</span>
+                    <span style="color:#64748b;"> (was {int(m['mins_5'])})</span>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -898,7 +850,7 @@ elif page == "📋 Fixture Difficulty":
         for _, row in df_grid.iterrows():
             cols = st.columns([2] + [1] * len(future_gws))
             with cols[0]:
-                st.markdown(f"<div style='padding:8px;color:white;font-weight:bold;'>{row['Team']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='padding:8px;color:#1e293b;font-weight:bold;'>{row['Team']}</div>", unsafe_allow_html=True)
             for i, gw in enumerate(future_gws):
                 with cols[i + 1]:
                     fixture = row.get(f'GW{gw}', '-')
@@ -974,9 +926,9 @@ elif page == "🔍 Player Search":
                             marker_color=pos_color
                         ))
                         fig.update_layout(
-                            plot_bgcolor='#0a1628',
-                            paper_bgcolor='#0a1628',
-                            font_color='#FFFFFF',
+                            plot_bgcolor='white',
+                            paper_bgcolor='white',
+                            font_color='#1e293b',
                             height=250,
                             yaxis_title='Points'
                         )
@@ -1002,16 +954,16 @@ elif page == "🏆 League Standings":
         for i, (_, row) in enumerate(current.iterrows()):
             if i == 0:
                 medal = "🥇"
-                bg = "linear-gradient(90deg, #ffd700 0%, #0f2040 30%)"
+                bg = "linear-gradient(90deg, #ffd700 0%, #ffffff 30%)"
             elif i == 1:
                 medal = "🥈"
-                bg = "linear-gradient(90deg, #c0c0c0 0%, #0f2040 30%)"
+                bg = "linear-gradient(90deg, #c0c0c0 0%, #ffffff 30%)"
             elif i == 2:
                 medal = "🥉"
-                bg = "linear-gradient(90deg, #cd7f32 0%, #0f2040 30%)"
+                bg = "linear-gradient(90deg, #cd7f32 0%, #ffffff 30%)"
             else:
                 medal = f"#{i+1}"
-                bg = "#0f2040"
+                bg = "#ffffff;border:1px solid #e2e8f0"
 
             # Calculate points behind leader
             leader_pts = current.iloc[0]['total_points']
@@ -1022,12 +974,12 @@ elif page == "🏆 League Standings":
             <div style="display:flex;align-items:center;padding:12px 16px;margin:4px 0;background:{bg};border-radius:10px;">
                 <div style="width:50px;font-size:22px;">{medal}</div>
                 <div style="flex:1;">
-                    <div style="color:white;font-weight:bold;font-size:16px;">{row['team_name']}</div>
-                    <div style="color:#8899bb;font-size:12px;">GW {latest_gw} score: {int(row['gw_points'])}</div>
+                    <div style="color:#1e293b;font-weight:bold;font-size:16px;">{row['team_name']}</div>
+                    <div style="color:#64748b;font-size:12px;">GW {latest_gw} score: {int(row['gw_points'])}</div>
                 </div>
                 <div style="width:100px;text-align:right;">
-                    <div style="color:#4ade80;font-weight:bold;font-size:22px;">{int(row['total_points'])}</div>
-                    <div style="color:#8899bb;font-size:12px;">{gap_text}</div>
+                    <div style="color:#059669;font-weight:bold;font-size:22px;">{int(row['total_points'])}</div>
+                    <div style="color:#64748b;font-size:12px;">{gap_text}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1063,13 +1015,13 @@ elif page == "📉 League Progression":
             ))
 
         fig.update_layout(
-            plot_bgcolor='#0a1628',
-            paper_bgcolor='#0a1628',
-            font_color='#FFFFFF',
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_color='#1e293b',
             xaxis_title='Gameweek',
             yaxis_title='Position',
             yaxis=dict(autorange='reversed', dtick=1),
-            legend=dict(bgcolor='#0f2040', font=dict(size=13, color='#FFFFFF')),
+            legend=dict(bgcolor='#f8fafc', font=dict(size=13, color='#1e293b')),
             height=600
         )
 
@@ -1091,12 +1043,12 @@ elif page == "📉 League Progression":
             ))
 
         fig2.update_layout(
-            plot_bgcolor='#0a1628',
-            paper_bgcolor='#0a1628',
-            font_color='#FFFFFF',
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font_color='#1e293b',
             xaxis_title='Gameweek',
             yaxis_title='Total Points',
-            legend=dict(bgcolor='#0f2040', font=dict(size=13, color='#FFFFFF')),
+            legend=dict(bgcolor='#f8fafc', font=dict(size=13, color='#1e293b')),
             height=500
         )
 
@@ -1137,10 +1089,10 @@ elif page == "💸 Fines":
 
             bar_color = COLORS['green'] if balance <= 0 else COLORS['red']
             st.markdown(f"""
-            <div style="display:flex;align-items:center;padding:10px 14px;margin:4px 0;background:#0f2040;border-radius:8px;">
-                <div style="flex:1;color:white;font-weight:bold;">{row['Team']}</div>
+            <div style="display:flex;align-items:center;padding:10px 14px;margin:4px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                <div style="flex:1;color:#1e293b;font-weight:bold;">{row['Team']}</div>
                 <div style="width:80px;color:#fbbf24;font-weight:bold;">€{total:.0f}</div>
-                <div style="width:80px;color:#4ade80;">Paid: €{paid:.0f}</div>
+                <div style="width:80px;color:#059669;">Paid: €{paid:.0f}</div>
                 <div style="width:80px;color:{bar_color};font-weight:bold;">Owes: €{balance:.0f}</div>
             </div>
             """, unsafe_allow_html=True)
@@ -1156,9 +1108,9 @@ elif page == "💸 Fines":
 
         for _, row in gw_fines.iterrows():
             st.markdown(f"""
-            <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#0f2040;border-radius:8px;">
-                <div style="flex:1;color:white;">{row['team_name']}</div>
-                <div style="width:100px;color:#8899bb;font-size:12px;">{row['fine_reason']}</div>
+            <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                <div style="flex:1;color:#1e293b;">{row['team_name']}</div>
+                <div style="width:100px;color:#64748b;font-size:12px;">{row['fine_reason']}</div>
                 <div style="width:60px;color:#fbbf24;font-weight:bold;">€{row['fine_amount']:.0f}</div>
             </div>
             """, unsafe_allow_html=True)
@@ -1191,20 +1143,20 @@ elif page == "👤 Members":
             s2 = manager.get('season2_position', '') or '-'
 
             st.markdown(f"""
-            <div style="background:#0f2040;border-radius:10px;padding:20px;margin:10px 0;border-left:3px solid #E10014;">
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin:10px 0;border-left:3px solid #E10014;">
                 <div style="display:flex;align-items:center;">
-                    <div style="width:60px;height:60px;background:#1a3050;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;">⚽</div>
+                    <div style="width:60px;height:60px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;">⚽</div>
                     <div style="margin-left:15px;flex:1;">
-                        <h3 style="color:white;margin:0;">{team_name}</h3>
-                        <p style="color:#8899bb;margin:0;">{manager.get('manager_name', '') or 'Name TBD'}</p>
+                        <h3 style="color:#1e293b;margin:0;">{team_name}</h3>
+                        <p style="color:#64748b;margin:0;">{manager.get('manager_name', '') or 'Name TBD'}</p>
                     </div>
                     <div style="text-align:right;">
-                        <div style="color:#4ade80;font-size:24px;font-weight:bold;">#{int(current_rank)}</div>
-                        <div style="color:#8899bb;">{int(current_pts)} pts</div>
+                        <div style="color:#059669;font-size:24px;font-weight:bold;">#{int(current_rank)}</div>
+                        <div style="color:#64748b;">{int(current_pts)} pts</div>
                     </div>
                 </div>
-                <p style="color:#8899bb;margin-top:10px;">{bio}</p>
-                <div style="color:#8899bb;font-size:12px;margin-top:5px;">
+                <p style="color:#64748b;margin-top:10px;">{bio}</p>
+                <div style="color:#64748b;font-size:12px;margin-top:5px;">
                     Season 1: {s1} | Season 2: {s2} | Season 3: #{int(current_rank)}
                 </div>
             </div>
@@ -1282,19 +1234,19 @@ elif page == "🔄 Transfer Planner":
                             gain = best['predicted_pts'] - weak['predicted_pts']
 
                             st.markdown(f"""
-                            <div style="background:#0f2040;border-radius:10px;padding:15px;margin:8px 0;">
+                            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:15px;margin:8px 0;">
                                 <div style="display:flex;align-items:center;">
                                     <div style="flex:1;">
                                         <span style="color:#f87171;">OUT: {weak['player_name']}</span>
-                                        <span style="color:#8899bb;"> ({weak['predicted_pts']} pts, €{weak['value']}M)</span>
+                                        <span style="color:#64748b;"> ({weak['predicted_pts']} pts, €{weak['value']}M)</span>
                                     </div>
                                 </div>
                                 <div style="display:flex;align-items:center;margin-top:5px;">
                                     <div style="flex:1;">
-                                        <span style="color:#4ade80;">IN: {best['player_name']}</span>
-                                        <span style="color:#8899bb;"> ({best['predicted_pts']} pts, €{best['value']}M)</span>
+                                        <span style="color:#059669;">IN: {best['player_name']}</span>
+                                        <span style="color:#64748b;"> ({best['predicted_pts']} pts, €{best['value']}M)</span>
                                     </div>
-                                    <div style="color:#4ade80;font-weight:bold;">+{gain:.1f} pts</div>
+                                    <div style="color:#059669;font-weight:bold;">+{gain:.1f} pts</div>
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
@@ -1348,10 +1300,10 @@ elif page == "💬 Forum":
         team = st.session_state.get('logged_in_team', '')
 
         st.markdown(f"""
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#0f2040;border-radius:8px;margin-bottom:15px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:15px;">
             <div>
-                <span style="color:white;font-weight:bold;">👤 {user}</span>
-                <span style="color:#8899bb;margin-left:10px;">{team}</span>
+                <span style="color:#1e293b;font-weight:bold;">👤 {user}</span>
+                <span style="color:#64748b;margin-left:10px;">{team}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1392,7 +1344,7 @@ elif page == "💬 Forum":
                 for _, msg in messages.iterrows():
                     is_mine = msg['username'] == user
                     align = "flex-end" if is_mine else "flex-start"
-                    bg = "#1a3a6e" if is_mine else "#0f2040"
+                    bg = "#dbeafe" if is_mine else "#ffffff;border:1px solid #e2e8f0"
                     border = "border-right: 3px solid #E10014" if is_mine else "border-left: 3px solid #2563eb"
 
                     time_str = ""
@@ -1406,13 +1358,13 @@ elif page == "💬 Forum":
                     <div style="display:flex;justify-content:{align};margin:4px 0;">
                         <div style="max-width:70%;padding:10px 14px;background:{bg};border-radius:10px;{border};">
                             <div style="color:#E10014;font-weight:bold;font-size:13px;">{msg['username']}</div>
-                            <div style="color:white;margin:4px 0;">{msg['content']}</div>
-                            <div style="color:#8899bb;font-size:11px;">{time_str}</div>
+                            <div style="color:#1e293b;margin:4px 0;">{msg['content']}</div>
+                            <div style="color:#64748b;font-size:11px;">{time_str}</div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.markdown("<p style='color:#8899bb;text-align:center;'>No messages yet. Be the first to post!</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color:#64748b;text-align:center;'>No messages yet. Be the first to post!</p>", unsafe_allow_html=True)
 
         # --- ANNOUNCEMENTS TAB ---
         with forum_tab2:
@@ -1446,14 +1398,14 @@ elif page == "💬 Forum":
                         pass
 
                     st.markdown(f"""
-                    <div style="background:#0f2040;border-radius:10px;padding:20px;margin:10px 0;border-left:3px solid #E10014;">
-                        <h3 style="color:white;margin:0;">📢 {ann.get('title', 'Announcement')}</h3>
-                        <p style="color:#8899bb;font-size:12px;">by {ann['username']} | {time_str}</p>
-                        <p style="color:white;margin-top:10px;">{ann['content']}</p>
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin:10px 0;border-left:3px solid #E10014;">
+                        <h3 style="color:#1e293b;margin:0;">📢 {ann.get('title', 'Announcement')}</h3>
+                        <p style="color:#64748b;font-size:12px;">by {ann['username']} | {time_str}</p>
+                        <p style="color:#1e293b;margin-top:10px;">{ann['content']}</p>
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.markdown("<p style='color:#8899bb;text-align:center;'>No announcements yet.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color:#64748b;text-align:center;'>No announcements yet.</p>", unsafe_allow_html=True)
 
         # --- POLLS TAB ---
         with forum_tab3:
@@ -1479,9 +1431,9 @@ elif page == "💬 Forum":
             if not polls.empty:
                 for _, poll in polls.iterrows():
                     st.markdown(f"""
-                    <div style="background:#0f2040;border-radius:10px;padding:15px;margin:10px 0;border-left:3px solid #d97706;">
-                        <h4 style="color:white;margin:0;">📊 {poll['question']}</h4>
-                        <p style="color:#8899bb;font-size:12px;">by {poll['created_by']}</p>
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:15px;margin:10px 0;border-left:3px solid #d97706;">
+                        <h4 style="color:#1e293b;margin:0;">📊 {poll['question']}</h4>
+                        <p style="color:#64748b;font-size:12px;">by {poll['created_by']}</p>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -1501,7 +1453,7 @@ elif page == "💬 Forum":
                         total_votes = results_df['votes'].sum() if not results_df.empty else 0
                         results_dict = dict(zip(results_df['selected_option'], results_df['votes'])) if not results_df.empty else {}
 
-                        st.markdown(f"<p style='color:#4ade80;'>You voted: {user_vote}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p style='color:#059669;'>You voted: {user_vote}</p>", unsafe_allow_html=True)
 
                         for opt in options:
                             votes = results_dict.get(opt, 0)
@@ -1510,11 +1462,11 @@ elif page == "💬 Forum":
                             st.markdown(f"""
                             <div style="margin:4px 0;">
                                 <div style="display:flex;align-items:center;">
-                                    <div style="width:120px;color:white;font-size:13px;">{opt}</div>
-                                    <div style="flex:1;background:#1a3050;border-radius:4px;height:20px;margin:0 10px;">
+                                    <div style="width:120px;color:#1e293b;font-size:13px;">{opt}</div>
+                                    <div style="flex:1;background:#dbeafe;border-radius:4px;height:20px;margin:0 10px;">
                                         <div style="width:{bar_width}%;background:#E10014;border-radius:4px;height:20px;"></div>
                                     </div>
-                                    <div style="width:60px;color:#8899bb;font-size:13px;">{votes} ({pct:.0f}%)</div>
+                                    <div style="width:60px;color:#64748b;font-size:13px;">{votes} ({pct:.0f}%)</div>
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
@@ -1532,7 +1484,7 @@ elif page == "💬 Forum":
                             )
                             st.rerun()
             else:
-                st.markdown("<p style='color:#8899bb;text-align:center;'>No active polls.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color:#64748b;text-align:center;'>No active polls.</p>", unsafe_allow_html=True)
 
 # ============================================
 # PAGE: ADMIN PANEL
@@ -1584,7 +1536,7 @@ elif page == "⚙️ Admin Panel":
                     st.error("Invalid admin password.")
     else:
         admin_user = st.session_state.get('admin_user', 'Admin')
-        st.markdown(f"<p style='color:#4ade80;'>Logged in as admin: {admin_user}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#059669;'>Logged in as admin: {admin_user}</p>", unsafe_allow_html=True)
 
         if st.button("Logout Admin"):
             st.session_state.admin_authenticated = False
@@ -1634,10 +1586,10 @@ elif page == "⚙️ Admin Panel":
                 for _, u in users.iterrows():
                     role = "🔑 Admin" if u['is_admin'] == 1 else "👤 User"
                     st.markdown(f"""
-                    <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#0f2040;border-radius:8px;">
-                        <div style="flex:1;color:white;font-weight:bold;">{u['username']}</div>
-                        <div style="width:150px;color:#8899bb;">{u.get('team_name', '')}</div>
-                        <div style="width:80px;color:#4ade80;">{role}</div>
+                    <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div style="flex:1;color:#1e293b;font-weight:bold;">{u['username']}</div>
+                        <div style="width:150px;color:#64748b;">{u.get('team_name', '')}</div>
+                        <div style="width:80px;color:#059669;">{role}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -1716,12 +1668,12 @@ elif page == "⚙️ Admin Panel":
                     merged['balance'] = merged['total_fines'] - merged['total_paid']
 
                     for _, row in merged.iterrows():
-                        balance_color = '#4ade80' if row['balance'] <= 0 else '#f87171'
+                        balance_color = '#059669' if row['balance'] <= 0 else '#f87171'
                         st.markdown(f"""
-                        <div style="display:flex;align-items:center;padding:10px 14px;margin:4px 0;background:#0f2040;border-radius:8px;">
-                            <div style="flex:1;color:white;font-weight:bold;">{row['team_name']}</div>
+                        <div style="display:flex;align-items:center;padding:10px 14px;margin:4px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                            <div style="flex:1;color:#1e293b;font-weight:bold;">{row['team_name']}</div>
                             <div style="width:80px;color:#fbbf24;">Fines: €{row['total_fines']:.0f}</div>
-                            <div style="width:80px;color:#4ade80;">Paid: €{row['total_paid']:.0f}</div>
+                            <div style="width:80px;color:#059669;">Paid: €{row['total_paid']:.0f}</div>
                             <div style="width:90px;color:{balance_color};font-weight:bold;">Balance: €{row['balance']:.0f}</div>
                         </div>
                         """, unsafe_allow_html=True)
