@@ -7,7 +7,7 @@ import json
 import os
 import hashlib
 from datetime import datetime
-from db import get_conn, read_sql, execute
+from wfs_db import get_conn, read_sql, execute
 
 # ============================================
 # PAGE CONFIG
