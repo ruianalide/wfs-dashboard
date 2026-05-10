@@ -58,13 +58,19 @@ def get_conn():
 # ── SQL parsing helpers ───────────────────────────────────────────────────────
 
 def _extract_table(query: str) -> str:
+    # SELECT ... FROM table
     m = re.search(r'\bFROM\s+(["\w]+)', query, re.IGNORECASE)
     if m:
         return m.group(1).strip('"')
-    # Also handle INSERT INTO table
+    # INSERT INTO table
     m2 = re.search(r'\bINTO\s+(["\w]+)', query, re.IGNORECASE)
     if m2:
         return m2.group(1).strip('"')
+    # UPDATE table SET
+    m3 = re.search(r'\bUPDATE\s+(["\w]+)\s+SET', query, re.IGNORECASE)
+    if m3:
+        return m3.group(1).strip('"')
+    # DELETE FROM table (already covered by FROM, but just in case)
     raise ValueError(f"Cannot extract table name from: {query}")
 
 
