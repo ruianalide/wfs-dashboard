@@ -194,6 +194,7 @@ def _sb_insert(sb, query: str, params, many: bool):
     table = _extract_table(query)
     cols_match = re.search(r'\(([^)]+)\)\s+VALUES', query, re.IGNORECASE)
     if not cols_match or not params:
+        print(f"[wfs_db] INSERT skipped: cols_match={bool(cols_match)}, params={bool(params)}")
         return
     cols = [c.strip() for c in cols_match.group(1).split(',')]
 
@@ -202,8 +203,13 @@ def _sb_insert(sb, query: str, params, many: bool):
     else:
         rows = [dict(zip(cols, params))]
 
-    # Use upsert to handle ON CONFLICT
-    sb.table(table).upsert(rows).execute()
+    print(f"[wfs_db] INSERT into {table}: {rows}")
+    try:
+        resp = sb.table(table).upsert(rows).execute()
+        print(f"[wfs_db] INSERT response: {resp.data}")
+    except Exception as e:
+        print(f"[wfs_db] INSERT error: {e}")
+        raise
 
 
 def _sb_update(sb, query: str, params):
