@@ -1,18 +1,19 @@
 """
 wfs_db.py — Database abstraction layer.
 
-Local (development):  uses SQLite via SQLITE_PATH env var or default path
-Production (Supabase): uses Supabase Python client (HTTP, no libpq needed)
-
-The dashboard imports `read_sql` and `execute` from here.
+Local (development):  SQLite
+Production (Supabase): 
+  - Simple full-table SELECTs → Supabase REST client (no libpq needed)
+  - Parameterised queries (WHERE, INSERT, UPDATE, DELETE) → psycopg via DATABASE_URL
 
 Environment variables:
-    DATABASE_URL  — Supabase PostgreSQL URL (triggers postgres backend)
-    SUPABASE_URL  — Supabase project URL (e.g. https://xxx.supabase.co)
-    SUPABASE_KEY  — Supabase anon/service key
+    DATABASE_URL  — PostgreSQL connection string
+    SUPABASE_URL  — Supabase project URL
+    SUPABASE_KEY  — Supabase anon/publishable key
 """
 
 import os
+import re
 import sqlite3
 import contextlib
 import pandas as pd
@@ -20,12 +21,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── detect which backend to use ──────────────────────────────────────────────
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Use Supabase client if SUPABASE_URL+KEY are set, else fall back to psycopg/sqlite
 if SUPABASE_URL and SUPABASE_KEY:
     _BACKEND = "supabase"
 elif DATABASE_URL:
@@ -33,7 +32,6 @@ elif DATABASE_URL:
 else:
     _BACKEND = "sqlite"
 
-# SQLite path (only used locally)
 _SQLITE_PATH = os.getenv(
     "SQLITE_PATH",
     r"C:\Users\ruiana\OneDrive - amazon.com\Attachments\Personal\Fantasy\wfs_fantasy.db"
@@ -41,8 +39,7 @@ _SQLITE_PATH = os.getenv(
 
 print(f"[wfs_db] Backend: {_BACKEND}")
 
-
-# ── Supabase client (lazy init) ───────────────────────────────────────────────
+# ── Supabase client (lazy) ────────────────────────────────────────────────────
 _supabase_client = None
 
 def _get_supabase():
@@ -53,7 +50,23 @@ def _get_supabase():
     return _supabase_client
 
 
-# ── SQLite connection helper ──────────────────────────────────────────────────
+# ── psycopg helper (for parameterised queries in production) ──────────────────
+@contextlib.contextmanager
+def _pg_conn():
+    """Open a psycopg connection to Supabase PostgreSQL."""
+    import psycopg
+    conn = psycopg.connect(DATABASE_URL)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+# ── SQLite helper (local) ─────────────────────────────────────────────────────
 @contextlib.contextmanager
 def get_conn():
     """SQLite connection context manager (local only)."""
@@ -70,23 +83,59 @@ def get_conn():
         conn.close()
 
 
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _extract_table(query: str) -> str:
+    m = re.search(r'\bFROM\s+(["\w]+)', query, re.IGNORECASE)
+    if m:
+        return m.group(1).strip('"')
+    raise ValueError(f"Cannot extract table name from: {query}")
+
+
+def _is_simple_select(query: str, params) -> bool:
+    """True if query is a plain SELECT * FROM table with no WHERE/params."""
+    q = query.strip().upper()
+    return (
+        q.startswith("SELECT") and
+        "WHERE" not in q and
+        not params
+    )
+
+
+def _apply_order(df: pd.DataFrame, query: str) -> pd.DataFrame:
+    order_match = re.search(r'ORDER BY\s+(.+?)(?:LIMIT|$)', query, re.IGNORECASE)
+    if not order_match:
+        return df
+    order_str = order_match.group(1).strip()
+    cols, ascending = [], []
+    for part in [p.strip() for p in order_str.split(',')]:
+        tokens = part.split()
+        col = tokens[0]
+        asc = len(tokens) < 2 or tokens[1].upper() != 'DESC'
+        if col in df.columns:
+            cols.append(col)
+            ascending.append(asc)
+    if cols:
+        df = df.sort_values(cols, ascending=ascending)
+    return df.reset_index(drop=True)
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def read_sql(query: str, params=None) -> pd.DataFrame:
     """Execute a SELECT and return a DataFrame."""
+
     if _BACKEND == "supabase":
-        # Extract table name from simple SELECT queries
-        # For complex queries, fall back to postgres direct connection
-        return _supabase_read_sql(query, params)
+        if _is_simple_select(query, params):
+            # Use REST client for full-table reads (fast, no libpq)
+            return _supabase_full_table(query)
+        else:
+            # Use psycopg for parameterised queries
+            return _pg_read_sql(query, params)
+
     elif _BACKEND == "postgres":
-        import psycopg2
-        pg_query = query.replace("?", "%s")
-        import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
-        try:
-            return pd.read_sql(pg_query, conn, params=params)
-        finally:
-            conn.close()
+        return _pg_read_sql(query, params)
+
     else:
         with get_conn() as conn:
             return pd.read_sql(query, conn, params=params)
@@ -94,21 +143,16 @@ def read_sql(query: str, params=None) -> pd.DataFrame:
 
 def execute(query: str, params=None, many: bool = False):
     """Execute an INSERT / UPDATE / DELETE."""
-    if _BACKEND == "supabase":
-        _supabase_execute(query, params)
-    elif _BACKEND == "postgres":
-        import psycopg2
+
+    if _BACKEND in ("supabase", "postgres"):
         pg_query = query.replace("?", "%s")
-        conn = psycopg2.connect(DATABASE_URL)
-        try:
+        with _pg_conn() as conn:
             cursor = conn.cursor()
             if many:
                 cursor.executemany(pg_query, params or [])
             else:
                 cursor.execute(pg_query, params or ())
-            conn.commit()
-        finally:
-            conn.close()
+
     else:
         with get_conn() as conn:
             cursor = conn.cursor()
@@ -118,100 +162,39 @@ def execute(query: str, params=None, many: bool = False):
                 cursor.execute(query, params or ())
 
 
-# ── Supabase helpers ──────────────────────────────────────────────────────────
+# ── Supabase REST (full-table reads) ──────────────────────────────────────────
 
-def _extract_table(query: str) -> str:
-    """Extract table name from a simple SELECT query."""
-    import re
-    # Match: SELECT ... FROM table_name ...
-    m = re.search(r'\bFROM\s+(["\w]+)', query, re.IGNORECASE)
-    if m:
-        return m.group(1).strip('"')
-    raise ValueError(f"Cannot extract table name from query: {query}")
-
-
-def _supabase_read_sql(query: str, params=None) -> pd.DataFrame:
-    """Read data from Supabase using the REST API with automatic pagination."""
+def _supabase_full_table(query: str) -> pd.DataFrame:
+    """Fetch all rows from a table via Supabase REST with pagination."""
     sb = _get_supabase()
     table = _extract_table(query)
-
-    # Fetch all rows using pagination (Supabase default limit is 1000)
     PAGE_SIZE = 1000
     all_data = []
     offset = 0
-
     while True:
-        response = sb.table(table).select("*").range(offset, offset + PAGE_SIZE - 1).execute()
-        batch = response.data
+        resp = sb.table(table).select("*").range(offset, offset + PAGE_SIZE - 1).execute()
+        batch = resp.data
         if not batch:
             break
         all_data.extend(batch)
         if len(batch) < PAGE_SIZE:
             break
         offset += PAGE_SIZE
-
     if not all_data:
         return pd.DataFrame()
-
-    df = pd.DataFrame(all_data)
-
-    # Apply ORDER BY if present
-    import re
-    order_match = re.search(r'ORDER BY\s+(.+?)(?:LIMIT|$)', query, re.IGNORECASE)
-    if order_match:
-        order_str = order_match.group(1).strip()
-        order_parts = [p.strip() for p in order_str.split(',')]
-        cols = []
-        ascending = []
-        for part in order_parts:
-            tokens = part.split()
-            col = tokens[0]
-            asc = True if len(tokens) < 2 or tokens[1].upper() != 'DESC' else False
-            if col in df.columns:
-                cols.append(col)
-                ascending.append(asc)
-        if cols:
-            df = df.sort_values(cols, ascending=ascending)
-
-    return df.reset_index(drop=True)
+    return _apply_order(pd.DataFrame(all_data), query)
 
 
-def _supabase_execute(query: str, params=None):
-    """Execute a write operation via Supabase REST API."""
-    sb = _get_supabase()
-    query_upper = query.strip().upper()
+# ── psycopg reads (parameterised queries) ────────────────────────────────────
 
-    if query_upper.startswith("INSERT"):
-        table = _extract_table(query)
-        # Build dict from params — requires column names
-        # For simple inserts, use upsert via the table API
-        # This is a best-effort implementation; complex queries may need adjustment
-        import re
-        cols_match = re.search(r'\(([^)]+)\)\s+VALUES', query, re.IGNORECASE)
-        if cols_match and params:
-            cols = [c.strip() for c in cols_match.group(1).split(',')]
-            if isinstance(params[0], (list, tuple)):
-                rows = [dict(zip(cols, row)) for row in params]
-            else:
-                rows = [dict(zip(cols, params))]
-            sb.table(table).upsert(rows).execute()
-
-    elif query_upper.startswith("UPDATE"):
-        table = _extract_table(query)
-        # For UPDATE, use the Supabase update API
-        # This is simplified — complex WHERE clauses may need adjustment
-        import re
-        set_match = re.search(r'SET\s+(.+?)\s+WHERE\s+(.+?)(?:$)', query, re.IGNORECASE | re.DOTALL)
-        if set_match and params:
-            # Best effort: use raw SQL via rpc if available
-            pass  # Complex updates handled by sync script, not dashboard
-
-    elif query_upper.startswith("DELETE"):
-        table = _extract_table(query)
-        # Simple deletes only
-        import re
-        where_match = re.search(r'WHERE\s+(\w+)\s*=\s*\?', query, re.IGNORECASE)
-        if where_match and params:
-            col = where_match.group(1)
-            val = params[0] if isinstance(params, (list, tuple)) else params
-            sb.table(table).delete().eq(col, val).execute()
+def _pg_read_sql(query: str, params=None) -> pd.DataFrame:
+    """Execute a parameterised SELECT via psycopg."""
+    pg_query = query.replace("?", "%s")
+    with _pg_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(pg_query, params or ())
+        cols = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchall()
+    if not rows:
+        return pd.DataFrame(columns=cols)
+    return pd.DataFrame(rows, columns=cols)
