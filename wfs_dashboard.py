@@ -295,7 +295,6 @@ with st.sidebar:
             "📊 Overview",
             "🔮 Predictions",
             "👥 Player Comparison",
-            "💰 Value Picks",
             "📅 All Gameweeks",
             "📈 Feature Importance",
             "🚨 Alerts",
@@ -415,42 +414,56 @@ elif page == "🔮 Predictions":
     df_pred = load_predictions()
 
     if not df_pred.empty:
-        # Filters
+        # Position order: GK → DEF → MID → ATT
+        POS_ORDER = {'GK': 0, 'DEF': 1, 'MID': 2, 'ATT': 3}
+        df_pred['_pos_order'] = df_pred['position'].map(POS_ORDER).fillna(99)
+
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             gw_options = sorted(df_pred['gameweek'].unique())
-            selected_gw = st.selectbox("Gameweek", gw_options)
+            selected_gws = st.multiselect("Gameweek", gw_options, default=[gw_options[0]])
         with col2:
-            positions = ['All'] + sorted(df_pred['position'].dropna().unique().tolist())
-            selected_pos = st.selectbox("Position", positions)
+            positions = ['GK', 'DEF', 'MID', 'ATT']
+            selected_pos = st.multiselect("Position", positions, default=positions)
         with col3:
-            teams = ['All'] + sorted(df_pred['team'].dropna().unique().tolist())
-            selected_team = st.selectbox("Team", teams)
+            teams = sorted(df_pred['team'].dropna().unique().tolist())
+            selected_teams = st.multiselect("Team", teams, default=[])
         with col4:
-            conf_options = ['All', 'High', 'Medium', 'Low']
-            selected_conf = st.selectbox("Confidence", conf_options)
+            conf_options = ['High', 'Medium', 'Low']
+            selected_conf = st.multiselect("Confidence", conf_options, default=conf_options)
 
         # Apply filters
-        df_filtered = df_pred[df_pred['gameweek'] == selected_gw]
-        if selected_pos != 'All':
-            df_filtered = df_filtered[df_filtered['position'] == selected_pos]
-        if selected_team != 'All':
-            df_filtered = df_filtered[df_filtered['team'] == selected_team]
-        if selected_conf != 'All':
-            df_filtered = df_filtered[df_filtered['confidence'] == selected_conf]
+        df_filtered = df_pred.copy()
+        if selected_gws:
+            df_filtered = df_filtered[df_filtered['gameweek'].isin(selected_gws)]
+        if selected_pos:
+            df_filtered = df_filtered[df_filtered['position'].isin(selected_pos)]
+        if selected_teams:
+            df_filtered = df_filtered[df_filtered['team'].isin(selected_teams)]
+        if selected_conf:
+            df_filtered = df_filtered[df_filtered['confidence'].isin(selected_conf)]
 
-        df_filtered = df_filtered.sort_values('predicted_pts', ascending=False)
+        # Sort: position order first, then predicted_pts descending
+        df_filtered = df_filtered.sort_values(
+            ['gameweek', '_pos_order', 'predicted_pts'],
+            ascending=[True, True, False]
+        ).drop(columns=['_pos_order'])
 
         st.markdown(f"**{len(df_filtered)} players** matching filters")
 
-        # Display table
+        # Build display columns — include confidence_score if available
         display_cols = ['rank', 'player_name', 'position', 'team', 'opponent',
                         'predicted_pts', 'form_last_3', 'form_last_5',
-                        'mins_last_3', 'value', 'pts_per_value', 'confidence']
+                        'mins_last_3', 'value', 'confidence', 'confidence_score']
         available_cols = [c for c in display_cols if c in df_filtered.columns]
 
+        # Rename confidence_score for display
+        df_display = df_filtered[available_cols].reset_index(drop=True).copy()
+        if 'confidence_score' in df_display.columns:
+            df_display = df_display.rename(columns={'confidence_score': 'conf_%'})
+
         st.dataframe(
-            df_filtered[available_cols].reset_index(drop=True),
+            df_display,
             use_container_width=True,
             height=600
         )
@@ -538,55 +551,6 @@ elif page == "👥 Player Comparison":
             height=400
         )
         st.plotly_chart(fig, use_container_width=True)
-
-# ============================================
-# PAGE: VALUE PICKS
-# ============================================
-elif page == "💰 Value Picks":
-    st.markdown("""
-    <div class="main-header">
-        <h1>💰 Value Picks</h1>
-        <p>Best predicted points per million</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    df_pred = load_predictions()
-
-    if not df_pred.empty:
-        next_gw = int(df_pred['gameweek'].min())
-        df_next = df_pred[df_pred['gameweek'] == next_gw]
-
-        col1, col2 = st.columns(2)
-        with col1:
-            max_price = st.slider("Max Price (€M)", 1.0, 15.0, 10.0, 0.5)
-        with col2:
-            min_pred = st.slider("Min Predicted Points", 0.0, 10.0, 2.0, 0.5)
-
-        df_value = df_next[
-            (df_next['value'] > 0) &
-            (df_next['value'] <= max_price) &
-            (df_next['predicted_pts'] >= min_pred)
-        ].sort_values('pts_per_value', ascending=False)
-
-        st.markdown(f"**{len(df_value)} players** within budget")
-
-        # Top value by position
-        for pos in ['GK', 'DEF', 'MID', 'ATT']:
-            pos_color = POSITION_COLORS.get(pos, '#6b7280')
-            pos_data = df_value[df_value['position'] == pos].head(5)
-            if not pos_data.empty:
-                st.markdown(f"### <span style='color:{pos_color};'>{pos}</span>", unsafe_allow_html=True)
-                for _, row in pos_data.iterrows():
-                    st.markdown(f"""
-                    <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
-                        <div style="flex:1;color:#1e293b;font-weight:bold;">{row['player_name']}</div>
-                        <div style="width:100px;color:#64748b;">{row['team']}</div>
-                        <div style="width:100px;color:#64748b;">vs {row.get('opponent', '')}</div>
-                        <div style="width:60px;color:#059669;font-weight:bold;">{row['predicted_pts']}</div>
-                        <div style="width:60px;color:#64748b;">€{row['value']}M</div>
-                        <div style="width:80px;color:#d97706;font-weight:bold;">{row['pts_per_value']} pts/€M</div>
-                    </div>
-                    """, unsafe_allow_html=True)
 
 # ============================================
 # PAGE: ALL GAMEWEEKS
