@@ -299,7 +299,7 @@ with st.sidebar:
             "📈 Feature Importance",
             "🚨 Alerts",
             "📋 Fixture Difficulty",
-            "🔄 Transfer Planner",
+            "🧮 XI Calculator",
             "🔍 Player Search",
             "🏆 League Standings",
             "📉 League Progression",
@@ -1127,13 +1127,13 @@ elif page == "👤 Members":
             """, unsafe_allow_html=True)
 
 # ============================================
-# PAGE: TRANSFER PLANNER
+# PAGE: XI CALCULATOR
 # ============================================
-elif page == "🔄 Transfer Planner":
+elif page == "🧮 XI Calculator":
     st.markdown("""
     <div class="main-header">
-        <h1>🔄 Transfer Planner</h1>
-        <p>Optimize your transfers based on predictions</p>
+        <h1>🧮 XI Calculator</h1>
+        <p>Calculate predicted points for your starting eleven</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1142,78 +1142,91 @@ elif page == "🔄 Transfer Planner":
 
     if not df_pred.empty:
         next_gw = int(df_pred['gameweek'].min())
-        df_next = df_pred[df_pred['gameweek'] == next_gw]
 
-        st.subheader("📋 Your Current Squad")
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            gw_options = sorted(df_pred['gameweek'].unique())
+            selected_gw = st.selectbox("Gameweek", gw_options, key="xi_gw")
+        with col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.caption("Formation: 1 GK · min 3 DEF · min 2 MID · min 1 ATT")
 
-        all_player_names = sorted(df_players['name'].unique())
+        df_gw = df_pred[df_pred['gameweek'] == selected_gw]
+        all_player_names = sorted(df_gw['player_name'].unique())
+
+        # Build position-filtered lists
+        gk_names  = sorted(df_gw[df_gw['position'] == 'GK']['player_name'].unique())
+        def_names = sorted(df_gw[df_gw['position'] == 'DEF']['player_name'].unique())
+        mid_names = sorted(df_gw[df_gw['position'] == 'MID']['player_name'].unique())
+        att_names = sorted(df_gw[df_gw['position'] == 'ATT']['player_name'].unique())
+
+        st.markdown("### Select your XI")
 
         col1, col2 = st.columns(2)
         with col1:
-            budget = st.number_input("Remaining Budget (€M)", value=100.0, step=0.1)
+            gk_pick   = st.selectbox("🟦 Goalkeeper (1)", ["—"] + gk_names, key="xi_gk")
+            def_picks = st.multiselect("🟩 Defenders (3-5)", def_names, key="xi_def")
+            mid_picks = st.multiselect("🟨 Midfielders (2-5)", mid_names, key="xi_mid")
+            att_picks = st.multiselect("🟥 Attackers (1-3)", att_names, key="xi_att")
+
+        # Build XI list
+        xi = []
+        if gk_pick != "—":
+            xi.append(gk_pick)
+        xi += def_picks + mid_picks + att_picks
+
+        # Validation
+        n_gk  = 1 if gk_pick != "—" else 0
+        n_def = len(def_picks)
+        n_mid = len(mid_picks)
+        n_att = len(att_picks)
+        n_total = n_gk + n_def + n_mid + n_att
+
         with col2:
-            free_transfers = st.number_input("Free Transfers", value=2, min_value=0, max_value=5)
+            st.markdown("#### Formation check")
+            def check(label, ok, msg=""):
+                icon = "✅" if ok else "❌"
+                st.markdown(f"{icon} {label}" + (f" — {msg}" if msg else ""))
 
-        st.markdown("**Select your 15 players:**")
+            check("1 Goalkeeper",   n_gk == 1,  f"{n_gk} selected")
+            check("Min 3 Defenders", n_def >= 3, f"{n_def} selected")
+            check("Min 2 Midfielders", n_mid >= 2, f"{n_mid} selected")
+            check("Min 1 Attacker",  n_att >= 1,  f"{n_att} selected")
+            check("Exactly 11 players", n_total == 11, f"{n_total} selected")
 
-        # Position groups
-        gk_picks = st.multiselect("Goalkeepers (2)", all_player_names, max_selections=2, key="gk")
-        def_picks = st.multiselect("Defenders (5)", all_player_names, max_selections=5, key="def")
-        mid_picks = st.multiselect("Midfielders (5)", all_player_names, max_selections=5, key="mid")
-        att_picks = st.multiselect("Attackers (3)", all_player_names, max_selections=3, key="att")
+        # Results
+        if n_total == 11 and n_gk == 1 and n_def >= 3 and n_mid >= 2 and n_att >= 1:
+            xi_preds = df_gw[df_gw['player_name'].isin(xi)].copy()
+            xi_preds['_pos_order'] = xi_preds['position'].map({'GK': 0, 'DEF': 1, 'MID': 2, 'ATT': 3})
+            xi_preds = xi_preds.sort_values(['_pos_order', 'predicted_pts'], ascending=[True, False])
 
-        my_squad = gk_picks + def_picks + mid_picks + att_picks
+            total_pts = xi_preds['predicted_pts'].sum()
 
-        if len(my_squad) > 0:
-            st.markdown(f"**Squad size: {len(my_squad)}/15**")
+            st.markdown("---")
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#00235A,#E10014);border-radius:12px;padding:20px 28px;margin:10px 0;">
+                <div style="color:rgba(255,255,255,0.8);font-size:13px;text-transform:uppercase;letter-spacing:0.05em;">Total Predicted Points</div>
+                <div style="color:white;font-size:48px;font-weight:700;line-height:1.1;">{total_pts:.1f}</div>
+                <div style="color:rgba(255,255,255,0.7);font-size:13px;">GW {selected_gw} · {n_def}-{n_mid}-{n_att} formation</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            # Show squad predictions
-            squad_preds = df_next[df_next['player_name'].isin(my_squad)].sort_values('predicted_pts', ascending=False)
-
-            if not squad_preds.empty:
-                total_pred = squad_preds.head(11)['predicted_pts'].sum()
-                st.markdown(f"### Predicted Starting XI Points: **{total_pred:.1f}**")
-
-                # Suggest transfers
-                if st.button("🤖 Suggest Transfers"):
-                    optimize_gws = st.slider("Optimize for how many gameweeks?", 1, 6, 3)
-
-                    st.markdown("### 💡 Suggested Transfers")
-
-                    # Find weakest players in squad
-                    squad_preds_sorted = squad_preds.sort_values('predicted_pts', ascending=True)
-                    weakest = squad_preds_sorted.head(free_transfers)
-
-                    for _, weak in weakest.iterrows():
-                        # Find better replacement in same position within budget
-                        pos = weak['position']
-                        replacements = df_next[
-                            (df_next['position'] == pos) &
-                            (~df_next['player_name'].isin(my_squad)) &
-                            (df_next['predicted_pts'] > weak['predicted_pts'])
-                        ].sort_values('predicted_pts', ascending=False).head(3)
-
-                        if not replacements.empty:
-                            best = replacements.iloc[0]
-                            gain = best['predicted_pts'] - weak['predicted_pts']
-
-                            st.markdown(f"""
-                            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:15px;margin:8px 0;">
-                                <div style="display:flex;align-items:center;">
-                                    <div style="flex:1;">
-                                        <span style="color:#f87171;">OUT: {weak['player_name']}</span>
-                                        <span style="color:#64748b;"> ({weak['predicted_pts']} pts, €{weak['value']}M)</span>
-                                    </div>
-                                </div>
-                                <div style="display:flex;align-items:center;margin-top:5px;">
-                                    <div style="flex:1;">
-                                        <span style="color:#059669;">IN: {best['player_name']}</span>
-                                        <span style="color:#64748b;"> ({best['predicted_pts']} pts, €{best['value']}M)</span>
-                                    </div>
-                                    <div style="color:#059669;font-weight:bold;">+{gain:.1f} pts</div>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
+            st.markdown("### Player breakdown")
+            for _, row in xi_preds.iterrows():
+                pos_color = POSITION_COLORS.get(row['position'], '#6b7280')
+                conf_color = COLORS['green'] if row['confidence'] == 'High' else COLORS['yellow'] if row['confidence'] == 'Medium' else COLORS['red']
+                conf_score = f" · {row['confidence_score']:.0f}%" if 'confidence_score' in row and row['confidence_score'] > 0 else ""
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;padding:10px 14px;margin:4px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;border-left:4px solid {pos_color};">
+                    <div style="width:45px;"><span style="background:{pos_color};color:white;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;">{row['position']}</span></div>
+                    <div style="flex:1;font-weight:600;color:#1e293b;">{row['player_name']}</div>
+                    <div style="width:130px;color:#64748b;font-size:13px;">{row.get('opponent','')}</div>
+                    <div style="width:50px;font-weight:700;color:#059669;font-size:18px;">{row['predicted_pts']}</div>
+                    <div style="width:90px;text-align:right;"><span style="background:{conf_color};color:white;padding:2px 8px;border-radius:4px;font-size:11px;">{row['confidence']}{conf_score}</span></div>
+                </div>
+                """, unsafe_allow_html=True)
+        elif n_total > 0:
+            st.info("Complete your XI to see the predicted points total.")
 
 # ============================================
 # PAGE: FORUM
