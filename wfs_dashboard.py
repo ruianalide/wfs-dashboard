@@ -319,8 +319,15 @@ with st.sidebar:
 if page == "📊 Overview":
     st.markdown("""
     <div class="main-header">
-        <h1>⚽ Fantasy Liga Pause</h1>
-        <p>Liga Portugal 25/26 Prediction Dashboard</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+                <h1>⚽ Fantasy Liga Pause</h1>
+                <p>Liga Portugal 25/26 Prediction Dashboard</p>
+            </div>
+            <img src="https://raw.githubusercontent.com/ruianalide/wfs-dashboard/main/assets/liga_pause.jpg"
+                 style="height:80px;width:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.4);"
+                 alt="Liga Pause">
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
