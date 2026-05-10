@@ -1658,6 +1658,7 @@ elif page == "⚙️ Admin Panel":
                         merged = fines_summary.merge(payments_summary, on='team_name', how='left')
                     else:
                         merged = fines_summary.copy()
+                    if 'total_paid' not in merged.columns:
                         merged['total_paid'] = 0
                     merged['total_paid'] = merged['total_paid'].fillna(0)
                     merged['balance'] = merged['total_fines'] - merged['total_paid']
