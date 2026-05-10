@@ -1437,10 +1437,14 @@ elif page == "💬 Forum":
                     user_vote = user_vote_df.iloc[0]['selected_option'] if not user_vote_df.empty else None
 
                     if user_vote:
-                        results_df = read_sql(
-                            "SELECT selected_option, COUNT(*) as votes FROM forum_poll_votes WHERE poll_id = ? GROUP BY selected_option",
+                        _votes_raw = read_sql(
+                            "SELECT selected_option FROM forum_poll_votes WHERE poll_id = ?",
                             (int(poll['id']),)
                         )
+                        if not _votes_raw.empty:
+                            results_df = _votes_raw.groupby('selected_option').size().reset_index(name='votes')
+                        else:
+                            results_df = pd.DataFrame(columns=['selected_option', 'votes'])
                         total_votes = results_df['votes'].sum() if not results_df.empty else 0
                         results_dict = dict(zip(results_df['selected_option'], results_df['votes'])) if not results_df.empty else {}
 
@@ -1644,14 +1648,23 @@ elif page == "⚙️ Admin Panel":
                             st.rerun()
 
             with fine_tab3:
-                fines_summary = read_sql("""
-                    SELECT team_name, SUM(fine_amount) as total_fines
-                    FROM league_fines GROUP BY team_name ORDER BY total_fines DESC
-                """)
-                payments_summary = read_sql("""
-                    SELECT team_name, SUM(amount_paid) as total_paid
-                    FROM league_fines_payments GROUP BY team_name
-                """)
+                _fines_raw = read_sql("SELECT * FROM league_fines")
+                _payments_raw = read_sql("SELECT * FROM league_fines_payments")
+
+                if not _fines_raw.empty:
+                    _fines_raw['fine_amount'] = pd.to_numeric(_fines_raw['fine_amount'], errors='coerce').fillna(0)
+                    fines_summary = _fines_raw.groupby('team_name')['fine_amount'].sum().reset_index()
+                    fines_summary.columns = ['team_name', 'total_fines']
+                    fines_summary = fines_summary.sort_values('total_fines', ascending=False)
+                else:
+                    fines_summary = pd.DataFrame()
+
+                if not _payments_raw.empty and 'amount_paid' in _payments_raw.columns:
+                    _payments_raw['amount_paid'] = pd.to_numeric(_payments_raw['amount_paid'], errors='coerce').fillna(0)
+                    payments_summary = _payments_raw.groupby('team_name')['amount_paid'].sum().reset_index()
+                    payments_summary.columns = ['team_name', 'total_paid']
+                else:
+                    payments_summary = pd.DataFrame()
 
                 if not fines_summary.empty:
                     if not payments_summary.empty and 'team_name' in payments_summary.columns:
