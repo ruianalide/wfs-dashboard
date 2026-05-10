@@ -131,32 +131,33 @@ def read_sql(query: str, params=None) -> pd.DataFrame:
     filters = _parse_where(query, params)
     limit = _parse_limit(query)
 
-    # Build query
     PAGE_SIZE = 1000
     all_data = []
     offset = 0
 
-    while True:
-        q = sb.table(table).select("*")
-        # Apply WHERE filters
-        for col, val in filters.items():
-            q = q.eq(col, val)
-        # Apply pagination
-        end = offset + PAGE_SIZE - 1
-        if limit:
-            end = min(end, offset + limit - 1)
-        q = q.range(offset, end)
-        resp = q.execute()
-        batch = resp.data
-        if not batch:
-            break
-        all_data.extend(batch)
-        if len(batch) < PAGE_SIZE:
-            break
-        if limit and len(all_data) >= limit:
-            all_data = all_data[:limit]
-            break
-        offset += PAGE_SIZE
+    try:
+        while True:
+            q = sb.table(table).select("*")
+            for col, val in filters.items():
+                q = q.eq(col, val)
+            end = offset + PAGE_SIZE - 1
+            if limit:
+                end = min(end, offset + limit - 1)
+            q = q.range(offset, end)
+            resp = q.execute()
+            batch = resp.data
+            if not batch:
+                break
+            all_data.extend(batch)
+            if len(batch) < PAGE_SIZE:
+                break
+            if limit and len(all_data) >= limit:
+                all_data = all_data[:limit]
+                break
+            offset += PAGE_SIZE
+    except Exception as e:
+        print(f"[wfs_db] read_sql error on table '{table}': {e}")
+        return pd.DataFrame()
 
     if not all_data:
         return pd.DataFrame()
@@ -180,12 +181,16 @@ def execute(query: str, params=None, many: bool = False):
     sb = _get_sb()
     q_upper = query.strip().upper()
 
-    if q_upper.startswith("INSERT"):
-        _sb_insert(sb, query, params, many)
-    elif q_upper.startswith("UPDATE"):
-        _sb_update(sb, query, params)
-    elif q_upper.startswith("DELETE"):
-        _sb_delete(sb, query, params)
+    try:
+        if q_upper.startswith("INSERT"):
+            _sb_insert(sb, query, params, many)
+        elif q_upper.startswith("UPDATE"):
+            _sb_update(sb, query, params)
+        elif q_upper.startswith("DELETE"):
+            _sb_delete(sb, query, params)
+    except Exception as e:
+        print(f"[wfs_db] execute error: {e}")
+        raise
 
 
 # ── Supabase write helpers ────────────────────────────────────────────────────
