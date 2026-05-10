@@ -3,5 +3,6 @@ pandas
 numpy
 plotly
 supabase
+psycopg2-binary
 python-dotenv
 openpyxl

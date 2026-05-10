@@ -53,9 +53,9 @@ def _get_supabase():
 # ── psycopg helper (for parameterised queries in production) ──────────────────
 @contextlib.contextmanager
 def _pg_conn():
-    """Open a psycopg connection to Supabase PostgreSQL."""
-    import psycopg
-    conn = psycopg.connect(DATABASE_URL)
+    """Open a psycopg2 connection to Supabase PostgreSQL."""
+    import psycopg2
+    conn = psycopg2.connect(DATABASE_URL)
     try:
         yield conn
         conn.commit()
@@ -188,7 +188,7 @@ def _supabase_full_table(query: str) -> pd.DataFrame:
 # ── psycopg reads (parameterised queries) ────────────────────────────────────
 
 def _pg_read_sql(query: str, params=None) -> pd.DataFrame:
-    """Execute a parameterised SELECT via psycopg."""
+    """Execute a parameterised SELECT via psycopg2."""
     pg_query = query.replace("?", "%s")
     with _pg_conn() as conn:
         cursor = conn.cursor()
