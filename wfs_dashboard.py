@@ -286,7 +286,14 @@ def metric_card(label, value, subtitle=""):
 # SIDEBAR
 # ============================================
 with st.sidebar:
-    st.markdown("### ⚽ Fantasy Liga Pause")
+    st.markdown("""
+    <div style="text-align:center;padding:10px 0 5px 0;">
+        <img src="https://raw.githubusercontent.com/ruianalide/wfs-dashboard/main/assets/liga_pause.jpg"
+             style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.3);"
+             alt="Liga Pause">
+        <div style="color:white;font-weight:700;font-size:14px;margin-top:8px;">Fantasy Liga Pause</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
     page = st.radio(
@@ -319,14 +326,14 @@ with st.sidebar:
 if page == "📊 Overview":
     st.markdown("""
     <div class="main-header">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div>
-                <h1>⚽ Fantasy Liga Pause</h1>
-                <p>Liga Portugal 25/26 Prediction Dashboard</p>
-            </div>
+        <div style="display:flex;align-items:center;gap:16px;">
             <img src="https://raw.githubusercontent.com/ruianalide/wfs-dashboard/main/assets/liga_pause.jpg"
                  style="height:80px;width:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.4);"
                  alt="Liga Pause">
+            <div>
+                <h1>Fantasy Liga Pause</h1>
+                <p>Liga Portugal 25/26 Prediction Dashboard</p>
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
