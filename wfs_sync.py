@@ -190,6 +190,48 @@ def main():
     else:
         print(f"\n  ⚠️  feature_importance_history.json not found, skipping.")
 
+    # --- Sync fixtures from Calendar.xlsx ---
+    fixtures_path = os.path.join(SAVE_FOLDER, r"Multas\Calendar.xlsx")
+    if os.path.exists(fixtures_path):
+        print(f"\n  📋 fixtures...", end=" ")
+        df_fix = pd.read_excel(fixtures_path)
+        df_fix = df_fix.rename(columns={
+            'J': 'gw_number',
+            'Eq. Casa': 'home_team',
+            'Eq. Fora': 'away_team',
+            'Data': 'date',
+        })
+        df_fix['gw_number'] = pd.to_numeric(df_fix['gw_number'], errors='coerce')
+        df_fix = df_fix.dropna(subset=['gw_number'])
+        df_fix['gw_number'] = df_fix['gw_number'].astype(int)
+
+        # Keep only relevant columns
+        keep_cols = [c for c in ['gw_number', 'home_team', 'away_team', 'date'] if c in df_fix.columns]
+        df_fix = df_fix[keep_cols]
+        df_fix = df_fix.where(pd.notnull(df_fix), None)
+
+        pg_cur = pg_conn.cursor()
+        pg_cur.execute("""
+            CREATE TABLE IF NOT EXISTS fixtures (
+                gw_number BIGINT,
+                home_team TEXT,
+                away_team TEXT,
+                date TEXT
+            )
+        """)
+        pg_cur.execute("TRUNCATE TABLE fixtures")
+
+        cols = list(df_fix.columns)
+        placeholders = ", ".join(["%s"] * len(cols))
+        insert_sql = f'INSERT INTO fixtures ({", ".join(cols)}) VALUES ({placeholders})'
+        rows = [tuple(row) for row in df_fix.itertuples(index=False, name=None)]
+        psycopg2.extras.execute_batch(pg_cur, insert_sql, rows, page_size=500)
+        pg_conn.commit()
+        print(f"{len(rows)} rows")
+        total_rows += len(rows)
+    else:
+        print(f"\n  ⚠️  Calendar.xlsx not found, skipping fixtures.")
+
     pg_conn.close()
 
     elapsed = (datetime.now() - start).total_seconds()

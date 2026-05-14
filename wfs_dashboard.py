@@ -207,7 +207,16 @@ def load_fines_payments():
 
 @st.cache_data(ttl=300)
 def load_fixtures():
-    """Load fixtures from Excel."""
+    """Load fixtures from database, fallback to local Excel."""
+    try:
+        df = read_sql("SELECT * FROM fixtures")
+        if not df.empty:
+            df['gw_number'] = pd.to_numeric(df['gw_number'], errors='coerce')
+            return df
+    except Exception:
+        pass
+
+    # Fallback: local Excel
     try:
         path = os.path.join(SAVE_FOLDER, r"Multas\Calendar.xlsx")
         df = pd.read_excel(path)
