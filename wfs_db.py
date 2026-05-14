@@ -216,7 +216,11 @@ def _sb_insert(sb, query: str, params, many: bool):
 
     print(f"[wfs_db] INSERT into {table}: {rows}")
     try:
-        resp = sb.table(table).upsert(rows).execute()
+        # Use insert for append-only tables, upsert for tables with ON CONFLICT
+        if 'ON CONFLICT' in query.upper():
+            resp = sb.table(table).upsert(rows).execute()
+        else:
+            resp = sb.table(table).insert(rows).execute()
         print(f"[wfs_db] INSERT response: {resp.data}")
     except Exception as e:
         print(f"[wfs_db] INSERT error: {e}")
