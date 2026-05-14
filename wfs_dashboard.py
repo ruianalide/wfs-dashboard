@@ -301,13 +301,12 @@ with st.sidebar:
         [
             "📊 Overview",
             "🔮 Predictions",
-            "👥 Player Comparison",
-            "📅 All Gameweeks",
-            "📈 Feature Importance",
-            "🚨 Alerts",
-            "📋 Fixture Difficulty",
-            "🧮 XI Calculator",
             "🔍 Player Search",
+            "🧮 XI Calculator",
+            "📋 Fixture Difficulty",
+            "🚨 Alerts",
+            "📈 Feature Importance",
+            "👥 Player Comparison",
             "🏆 League Standings",
             "📉 League Progression",
             "💸 Fines",
@@ -565,65 +564,6 @@ elif page == "👥 Player Comparison":
             height=400
         )
         st.plotly_chart(fig, use_container_width=True)
-
-# ============================================
-# PAGE: ALL GAMEWEEKS
-# ============================================
-elif page == "📅 All Gameweeks":
-    st.markdown("""
-    <div class="main-header">
-        <h1>📅 All Remaining Gameweeks</h1>
-        <p>Predictions across GW 29 to GW 34</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    df_pred = load_predictions()
-
-    if not df_pred.empty:
-        player_names = sorted(df_pred['player_name'].unique())
-        selected_player = st.selectbox("Search Player", player_names)
-
-        player_preds = df_pred[df_pred['player_name'] == selected_player].sort_values('gameweek')
-
-        if not player_preds.empty:
-            first = player_preds.iloc[0]
-            st.markdown(f"""
-            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin:10px 0;">
-                <h3 style="color:#1e293b;">{selected_player}</h3>
-                <p style="color:#64748b;">{first['position']} | {first['team']} | €{first['value']}M</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # GW predictions chart
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=[f"GW {int(gw)}" for gw in player_preds['gameweek']],
-                y=player_preds['predicted_pts'],
-                marker_color=[COLORS['green'] if c == 'High' else COLORS['yellow'] if c == 'Medium' else COLORS['red'] for c in player_preds['confidence']],
-                text=player_preds['predicted_pts'],
-                textposition='outside'
-            ))
-            fig.update_layout(
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                font_color='#1e293b',
-                yaxis_title='Predicted Points',
-                height=350
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Opponent details
-            st.markdown("### Fixture Details")
-            for _, row in player_preds.iterrows():
-                conf_color = COLORS['green'] if row['confidence'] == 'High' else COLORS['yellow'] if row['confidence'] == 'Medium' else COLORS['red']
-                st.markdown(f"""
-                <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
-                    <div style="width:60px;font-weight:bold;color:#1e293b;">GW {int(row['gameweek'])}</div>
-                    <div style="flex:1;color:#64748b;">vs {row.get('opponent', 'TBD')}</div>
-                    <div style="width:80px;color:#059669;font-weight:bold;font-size:18px;">{row['predicted_pts']}</div>
-                    <div><span style="background:{conf_color};color:white;padding:2px 8px;border-radius:4px;font-size:11px;">{row['confidence']}</span></div>
-                </div>
-                """, unsafe_allow_html=True)
 
 # ============================================
 # PAGE: FEATURE IMPORTANCE
