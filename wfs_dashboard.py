@@ -14,7 +14,7 @@ from wfs_db import get_conn, read_sql, execute
 # ============================================
 st.set_page_config(
     page_title="Fantasy Liga Pause",
-    page_icon="⚽",
+    page_icon="https://raw.githubusercontent.com/ruianalide/wfs-dashboard/main/assets/liga_pause.jpg",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -315,6 +315,7 @@ with st.sidebar:
             "📋 Fixture Difficulty",
             "🚨 Alerts",
             "📈 Feature Importance",
+            "📊 Backtesting",
             "👥 Player Comparison",
             "🏆 League Standings",
             "📉 League Progression",
@@ -422,6 +423,30 @@ if page == "📊 Overview":
                 </div>
                 """, unsafe_allow_html=True)
 
+            # Mini progression chart
+            df_rankings = load_league_rankings()
+            if not df_rankings.empty:
+                st.markdown("---")
+                st.caption("📈 Position Progression")
+                fig_spark = go.Figure()
+                teams = sorted(df_rankings['team_name'].unique())
+                colors_list = px.colors.qualitative.Set3 + px.colors.qualitative.Bold
+                for idx, team in enumerate(teams):
+                    td = df_rankings[df_rankings['team_name'] == team].sort_values('gameweek')
+                    fig_spark.add_trace(go.Scatter(
+                        x=td['gameweek'], y=td['rank'], name=team,
+                        mode='lines', line=dict(color=colors_list[idx % len(colors_list)], width=2)
+                    ))
+                fig_spark.update_layout(
+                    plot_bgcolor='white', paper_bgcolor='white', font_color='#1e293b',
+                    height=250, margin=dict(l=30, r=10, t=10, b=30),
+                    yaxis=dict(autorange='reversed', dtick=1, title=''),
+                    xaxis=dict(title=''),
+                    legend=dict(orientation='h', font=dict(size=10), yanchor='top', y=-0.15),
+                    showlegend=True
+                )
+                st.plotly_chart(fig_spark, use_container_width=True)
+
 # ============================================
 # PAGE: PREDICTIONS
 # ============================================
@@ -489,6 +514,115 @@ elif page == "🔮 Predictions":
             use_container_width=True,
             height=600
         )
+
+# ============================================
+# PAGE: BACKTESTING
+# ============================================
+elif page == "📊 Backtesting":
+    st.markdown("""
+    <div class="main-header">
+        <h1>📊 Backtesting</h1>
+        <p>How accurate were our predictions?</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    try:
+        df_hist = read_sql("SELECT * FROM prediction_history")
+    except Exception:
+        df_hist = pd.DataFrame()
+
+    if not df_hist.empty and 'actual_pts' in df_hist.columns:
+        df_hist['predicted_pts'] = pd.to_numeric(df_hist['predicted_pts'], errors='coerce')
+        df_hist['actual_pts'] = pd.to_numeric(df_hist['actual_pts'], errors='coerce')
+        df_hist = df_hist.dropna(subset=['predicted_pts', 'actual_pts'])
+
+        if not df_hist.empty:
+            df_hist['error'] = df_hist['predicted_pts'] - df_hist['actual_pts']
+            df_hist['abs_error'] = df_hist['error'].abs()
+
+            # Overall metrics
+            mae = df_hist['abs_error'].mean()
+            avg_pred = df_hist['predicted_pts'].mean()
+            avg_actual = df_hist['actual_pts'].mean()
+            n_predictions = len(df_hist)
+            gws_covered = sorted(df_hist['gameweek'].unique())
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.markdown(metric_card("MAE", f"{mae:.2f}", "avg error in pts"), unsafe_allow_html=True)
+            with col2:
+                st.markdown(metric_card("AVG PREDICTED", f"{avg_pred:.1f}", "pts"), unsafe_allow_html=True)
+            with col3:
+                st.markdown(metric_card("AVG ACTUAL", f"{avg_actual:.1f}", "pts"), unsafe_allow_html=True)
+            with col4:
+                st.markdown(metric_card("PREDICTIONS", f"{n_predictions}", f"GWs: {gws_covered}"), unsafe_allow_html=True)
+
+            st.markdown("---")
+
+            # Error distribution
+            col_left, col_right = st.columns(2)
+
+            with col_left:
+                st.subheader("Error Distribution")
+                fig_err = go.Figure()
+                fig_err.add_trace(go.Histogram(
+                    x=df_hist['error'], nbinsx=30,
+                    marker_color='#2563eb', opacity=0.8
+                ))
+                fig_err.add_vline(x=0, line_dash="dash", line_color="#E10014")
+                fig_err.update_layout(
+                    plot_bgcolor='white', paper_bgcolor='white', font_color='#1e293b',
+                    xaxis_title='Prediction Error (predicted - actual)',
+                    yaxis_title='Count', height=350
+                )
+                st.plotly_chart(fig_err, use_container_width=True)
+
+            with col_right:
+                st.subheader("Predicted vs Actual")
+                fig_scatter = go.Figure()
+                fig_scatter.add_trace(go.Scatter(
+                    x=df_hist['actual_pts'], y=df_hist['predicted_pts'],
+                    mode='markers', marker=dict(color='#2563eb', opacity=0.4, size=5)
+                ))
+                # Perfect prediction line
+                max_val = max(df_hist['actual_pts'].max(), df_hist['predicted_pts'].max())
+                fig_scatter.add_trace(go.Scatter(
+                    x=[0, max_val], y=[0, max_val],
+                    mode='lines', line=dict(color='#E10014', dash='dash'),
+                    name='Perfect'
+                ))
+                fig_scatter.update_layout(
+                    plot_bgcolor='white', paper_bgcolor='white', font_color='#1e293b',
+                    xaxis_title='Actual Points', yaxis_title='Predicted Points',
+                    height=350, showlegend=False
+                )
+                st.plotly_chart(fig_scatter, use_container_width=True)
+
+            # Per-position accuracy
+            st.markdown("---")
+            st.subheader("Accuracy by Position")
+            pos_stats = df_hist.groupby('position').agg(
+                mae=('abs_error', 'mean'),
+                avg_pred=('predicted_pts', 'mean'),
+                avg_actual=('actual_pts', 'mean'),
+                count=('abs_error', 'count')
+            ).reset_index()
+
+            for _, row in pos_stats.iterrows():
+                pos_color = POSITION_COLORS.get(row['position'], '#6b7280')
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;padding:10px 14px;margin:4px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;border-left:4px solid {pos_color};">
+                    <div style="width:50px;"><span style="background:{pos_color};color:white;padding:2px 8px;border-radius:4px;font-weight:600;">{row['position']}</span></div>
+                    <div style="flex:1;color:#1e293b;">MAE: <b>{row['mae']:.2f}</b></div>
+                    <div style="width:120px;color:#64748b;">Pred avg: {row['avg_pred']:.1f}</div>
+                    <div style="width:120px;color:#64748b;">Actual avg: {row['avg_actual']:.1f}</div>
+                    <div style="width:80px;color:#64748b;">{int(row['count'])} preds</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("No resolved predictions with valid data yet.")
+    else:
+        st.info("📦 No backtesting data yet. Predictions will be archived automatically after each gameweek is played. Run the model after a GW completes to start building history.")
 
 # ============================================
 # PAGE: PLAYER COMPARISON
@@ -802,7 +936,7 @@ elif page == "🔍 Player Search":
     st.markdown("""
     <div class="main-header">
         <h1>🔍 Player Search</h1>
-        <p>Search any player for full stats and predictions</p>
+        <p>Search any player for full stats, predictions, and form</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -810,41 +944,61 @@ elif page == "🔍 Player Search":
     df_pred = load_predictions()
     df_gw = load_gameweeks()
 
-    search = st.text_input("Search player name")
+    col_search1, col_search2 = st.columns(2)
+    with col_search1:
+        search = st.text_input("Search player 1")
+    with col_search2:
+        search2 = st.text_input("Compare with (optional)")
 
-    if search and len(search) >= 2:
-        matches = df_players[df_players['name'].str.contains(search, case=False, na=False)]
+    searches = [s for s in [search, search2] if s and len(s) >= 2]
+
+    for s in searches:
+        matches = df_players[df_players['name'].str.contains(s, case=False, na=False)]
 
         if matches.empty:
-            st.warning("No players found.")
+            st.warning(f"No players found for '{s}'.")
         else:
-            for _, player in matches.head(5).iterrows():
+            for _, player in matches.head(3).iterrows():
                 pos_color = POSITION_COLORS.get(player.get('position', ''), '#6b7280')
 
-                with st.expander(f"{player['name']} - {player.get('position', '')} | {player.get('team', '')}"):
-                    col1, col2, col3, col4 = st.columns(4)
+                with st.expander(f"{player['name']} - {player.get('position', '')} | {player.get('team', '')}", expanded=(len(searches) == 1)):
+                    col1, col2, col3, col4, col5 = st.columns(5)
                     with col1:
                         st.metric("Value", f"€{player.get('value', 0)}M")
                     with col2:
                         st.metric("Points", int(player.get('points', 0)))
                     with col3:
-                        st.metric("Appearances", int(player.get('appearances', 0)))
+                        st.metric("PPG", f"{player.get('ppg', 0):.1f}")
                     with col4:
+                        st.metric("Appearances", int(player.get('appearances', 0)))
+                    with col5:
                         st.metric("Goals", int(player.get('goals', 0)))
 
-                    # Predictions
+                    # Predictions as cards
                     player_preds = df_pred[df_pred['player_name'] == player['name']]
                     if not player_preds.empty:
-                        st.markdown("**Predictions:**")
-                        for _, pred in player_preds.iterrows():
-                            st.write(f"GW {int(pred['gameweek'])}: {pred['predicted_pts']} pts vs {pred.get('opponent', 'TBD')} ({pred['confidence']})")
+                        st.markdown("**📮 Upcoming Predictions:**")
+                        pred_cols = st.columns(min(len(player_preds), 4))
+                        for idx, (_, pred) in enumerate(player_preds.head(4).iterrows()):
+                            with pred_cols[idx]:
+                                conf_color = COLORS['green'] if pred['confidence'] == 'High' else COLORS['yellow'] if pred['confidence'] == 'Medium' else COLORS['red']
+                                conf_score = f"{pred['confidence_score']:.0f}%" if 'confidence_score' in pred and pd.notna(pred.get('confidence_score')) else ""
+                                st.markdown(f"""
+                                <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;">
+                                    <div style="color:#64748b;font-size:12px;">GW {int(pred['gameweek'])}</div>
+                                    <div style="color:#059669;font-size:24px;font-weight:700;">{pred['predicted_pts']}</div>
+                                    <div style="color:#64748b;font-size:11px;">{pred.get('opponent', '')}</div>
+                                    <span style="background:{conf_color};color:white;padding:1px 6px;border-radius:3px;font-size:10px;">{pred['confidence']} {conf_score}</span>
+                                </div>
+                                """, unsafe_allow_html=True)
 
-                    # Recent form
+                    # Recent form chart
                     player_gw = df_gw[df_gw['player_name'] == player['name']]
                     if not player_gw.empty:
+                        player_gw = player_gw.copy()
                         player_gw['gw_number'] = player_gw['gameweek'].str.replace('GW', '').str.strip()
                         player_gw['gw_number'] = pd.to_numeric(player_gw['gw_number'], errors='coerce')
-                        player_gw = player_gw.sort_values('gw_number')
+                        player_gw = player_gw.sort_values('gw_number').drop_duplicates(subset='gw_number', keep='first')
 
                         fig = go.Figure()
                         fig.add_trace(go.Bar(
@@ -1009,6 +1163,29 @@ elif page == "💸 Fines":
             totals['Total Paid (€)'] = totals['Total Paid (€)'].fillna(0)
             totals['Balance (€)'] = totals['Total Fines (€)'] - totals['Total Paid (€)']
 
+        # Bar chart
+        fig_fines = go.Figure()
+        fig_fines.add_trace(go.Bar(
+            x=totals['Team'],
+            y=totals['Total Fines (€)'],
+            name='Total Fines',
+            marker_color='#E10014'
+        ))
+        if 'Total Paid (€)' in totals.columns:
+            fig_fines.add_trace(go.Bar(
+                x=totals['Team'],
+                y=totals['Total Paid (€)'],
+                name='Paid',
+                marker_color='#059669'
+            ))
+        fig_fines.update_layout(
+            plot_bgcolor='white', paper_bgcolor='white', font_color='#1e293b',
+            barmode='group', height=350, yaxis_title='€',
+            legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+        )
+        st.plotly_chart(fig_fines, use_container_width=True)
+
+        # List view
         for _, row in totals.iterrows():
             total = row['Total Fines (€)']
             paid = row.get('Total Paid (€)', 0)
@@ -1190,6 +1367,52 @@ elif page == "🧮 XI Calculator":
                 """, unsafe_allow_html=True)
         elif n_total > 0:
             st.info("Complete your XI to see the predicted points total.")
+
+        # --- Auto Best XI ---
+        st.markdown("---")
+        if st.button("🤖 Generate Best XI"):
+            # Pick best players per position respecting min constraints: 1GK, 3DEF, 2MID, 1ATT = 7 fixed, 4 flex
+            best_gk = df_gw[df_gw['position'] == 'GK'].nlargest(1, 'predicted_pts')
+            best_def = df_gw[df_gw['position'] == 'DEF'].nlargest(5, 'predicted_pts')
+            best_mid = df_gw[df_gw['position'] == 'MID'].nlargest(5, 'predicted_pts')
+            best_att = df_gw[df_gw['position'] == 'ATT'].nlargest(3, 'predicted_pts')
+
+            # Start with minimums
+            xi_auto = pd.concat([best_gk.head(1), best_def.head(3), best_mid.head(2), best_att.head(1)])
+            remaining_slots = 11 - len(xi_auto)
+
+            # Fill remaining 4 slots from best available (DEF/MID/ATT not yet selected)
+            used_names = set(xi_auto['player_name'])
+            pool = pd.concat([best_def, best_mid, best_att])
+            pool = pool[~pool['player_name'].isin(used_names)].nlargest(remaining_slots, 'predicted_pts')
+            xi_auto = pd.concat([xi_auto, pool]).head(11)
+
+            xi_auto['_pos_order'] = xi_auto['position'].map({'GK': 0, 'DEF': 1, 'MID': 2, 'ATT': 3})
+            xi_auto = xi_auto.sort_values(['_pos_order', 'predicted_pts'], ascending=[True, False])
+
+            total_auto = xi_auto['predicted_pts'].sum()
+            n_d = len(xi_auto[xi_auto['position'] == 'DEF'])
+            n_m = len(xi_auto[xi_auto['position'] == 'MID'])
+            n_a = len(xi_auto[xi_auto['position'] == 'ATT'])
+
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#00235A,#E10014);border-radius:12px;padding:20px 28px;margin:10px 0;">
+                <div style="color:rgba(255,255,255,0.8);font-size:13px;text-transform:uppercase;">Best XI — Predicted Points</div>
+                <div style="color:white;font-size:48px;font-weight:700;line-height:1.1;">{total_auto:.1f}</div>
+                <div style="color:rgba(255,255,255,0.7);font-size:13px;">GW {selected_gw} · {n_d}-{n_m}-{n_a} formation</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            for _, row in xi_auto.iterrows():
+                pos_color = POSITION_COLORS.get(row['position'], '#6b7280')
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;padding:8px 12px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;border-left:4px solid {pos_color};">
+                    <div style="width:45px;"><span style="background:{pos_color};color:white;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;">{row['position']}</span></div>
+                    <div style="flex:1;font-weight:600;color:#1e293b;">{row['player_name']}</div>
+                    <div style="width:100px;color:#64748b;font-size:13px;">{row['team']}</div>
+                    <div style="width:50px;font-weight:700;color:#059669;font-size:16px;">{row['predicted_pts']}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
 # ============================================
 # PAGE: FORUM

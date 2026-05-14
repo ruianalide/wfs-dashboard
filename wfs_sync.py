@@ -43,6 +43,7 @@ TABLES = [
     "league_fines_payments",
     "league_rankings",
     "predictions",
+    "prediction_history",
     "update_log",
     "forum_users",
     "forum_posts",

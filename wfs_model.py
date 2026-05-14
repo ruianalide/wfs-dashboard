@@ -268,34 +268,32 @@ def load_data():
     # Parse dates
     df_gameweeks['date'] = pd.to_datetime(df_gameweeks['date'], errors='coerce', dayfirst=True)
 
-    # Add team info to gameweeks from players table
-    player_teams = df_players[['name', 'team']].drop_duplicates()
-    player_teams = player_teams.rename(columns={'name': 'player_name'})
-
-    # For duplicate names, match by checking which team's opposition appears in gameweeks
-    df_gameweeks = df_gameweeks.merge(player_teams, on='player_name', how='left', suffixes=('', '_lookup'))
-    if 'team' not in df_gameweeks.columns and 'team_lookup' in df_gameweeks.columns:
-        df_gameweeks['team'] = df_gameweeks['team_lookup']
+    # Add team info to gameweeks from players table using player_url (unique per player)
+    if 'player_url' in df_gameweeks.columns and 'player_url' in df_players.columns:
+        player_info_map = df_players[['player_url', 'team']].dropna(subset=['player_url']).drop_duplicates(subset='player_url')
+        df_gameweeks = df_gameweeks.merge(player_info_map, on='player_url', how='left', suffixes=('', '_lookup'))
+        if 'team_lookup' in df_gameweeks.columns:
+            df_gameweeks['team'] = df_gameweeks['team'].fillna(df_gameweeks['team_lookup'])
+            df_gameweeks = df_gameweeks.drop(columns=['team_lookup'], errors='ignore')
+    else:
+        # Fallback: merge by name (may create duplicates for same-name players)
+        player_teams = df_players[['name', 'team']].drop_duplicates()
+        player_teams = player_teams.rename(columns={'name': 'player_name'})
+        df_gameweeks = df_gameweeks.merge(player_teams, on='player_name', how='left', suffixes=('', '_lookup'))
+        if 'team' not in df_gameweeks.columns and 'team_lookup' in df_gameweeks.columns:
+            df_gameweeks['team'] = df_gameweeks['team_lookup']
 
     # Sort by player and gameweek
     df_gameweeks = df_gameweeks.sort_values(['player_name', 'gw_number']).reset_index(drop=True)
 
-    # Handle duplicate player names: keep only the row where team matches opposition context
-    # For players with unique names, this has no effect
-    if 'team' in df_gameweeks.columns:
-        before_count = len(df_gameweeks)
-        # Extract opponent team from opposition field
-        df_gameweeks['opp_clean'] = df_gameweeks['opposition'].str.replace(r'^\([HA]\)\s*', '', regex=True)
-
-        # For each gameweek entry, a player's team should NOT be the same as their opponent
-        df_gameweeks = df_gameweeks[df_gameweeks['team'] != df_gameweeks['opp_clean']].copy()
-
-        # Drop helper column
-        df_gameweeks = df_gameweeks.drop(columns=['opp_clean'], errors='ignore')
-
-        after_count = len(df_gameweeks)
-        if before_count != after_count:
-            print(f"  ℹ️ Resolved {before_count - after_count} duplicate name conflicts")
+    # Remove any remaining duplicates (same player_name + gameweek + same data)
+    before_count = len(df_gameweeks)
+    df_gameweeks = df_gameweeks.drop_duplicates(
+        subset=['player_name', 'gameweek', 'player_url'], keep='first'
+    ).reset_index(drop=True)
+    after_count = len(df_gameweeks)
+    if before_count != after_count:
+        print(f"  ℹ️ Removed {before_count - after_count} duplicate entries")
 
     print(f"  ✅ Players: {len(df_players)}")
     print(f"  ✅ Gameweek entries: {len(df_gameweeks)}")
@@ -1081,8 +1079,45 @@ def save_outputs(df_predictions, models, all_importance, metrics, alerts, max_gw
         conn.execute("PRAGMA synchronous=NORMAL")
         cursor = conn.cursor()
 
+        # --- Create prediction_history table if not exists ---
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS prediction_history (
+                gameweek INTEGER,
+                player_name TEXT,
+                position TEXT,
+                team TEXT,
+                predicted_pts REAL,
+                actual_pts REAL,
+                confidence TEXT,
+                confidence_score REAL,
+                predicted_at TEXT,
+                resolved_at TEXT
+            )
+        """)
+
+        # --- Archive predictions for GWs that are now played ---
+        # Move predictions to history with actual points before deleting
+        cursor.execute("""
+            INSERT OR IGNORE INTO prediction_history
+                (gameweek, player_name, position, team, predicted_pts, actual_pts, confidence, confidence_score, predicted_at, resolved_at)
+            SELECT
+                p.gameweek, p.player_name, p.position, p.team, p.predicted_pts,
+                COALESCE(g.points, 0),
+                p.confidence, p.confidence_score, p.predicted_at, ?
+            FROM predictions p
+            LEFT JOIN gameweeks g ON p.player_name = g.player_name
+                AND 'GW ' || p.gameweek = g.gameweek
+                AND g.minutes > 0
+            WHERE p.gameweek IN (
+                SELECT DISTINCT CAST(REPLACE(gameweek, 'GW', '') AS INTEGER)
+                FROM gameweeks WHERE gameweek IS NOT NULL AND minutes > 0
+            )
+        """, (datetime.now().isoformat(),))
+        archived = cursor.rowcount
+        if archived > 0:
+            print(f"  📦 Archived {archived} predictions to history")
+
         # --- Limpar previsões de GWs já passadas ---
-        # Só considera uma GW como jogada se tiver jogadores com minutos > 0
         cursor.execute("""
             DELETE FROM predictions
             WHERE gameweek IN (
