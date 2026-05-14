@@ -259,12 +259,12 @@ def load_feature_importance():
 def load_opta_ratings():
     """Return Opta ratings (static dict, no cache needed)."""
     return {
-        'Sporting': 92.2, 'Benfica': 91.0, 'Porto': 90.8,
-        'Braga': 86.1, 'Famalicao': 81.3, 'Gil Vicente': 79.9,
-        'Vitoria': 79.7, 'Estoril': 79.2, 'Moreirense': 78.2,
-        'Santa Clara': 77.8, 'Arouca': 77.4, 'Rio Ave': 76.9,
-        'Alverca': 76.4, 'Casa Pia': 76.0, 'Nacional': 75.4,
-        'Estrela': 74.9, 'Tondela': 74.8, 'AVS': 71.8,
+        'Sporting': 92.5, 'Benfica': 91.9, 'Porto': 90.6,
+        'Braga': 87.5, 'Famalicão': 83.4, 'Gil Vicente': 80.5,
+        'Vitória': 81.3, 'Estoril': 79.9, 'Moreirense': 79.5,
+        'Santa Clara': 79.5, 'Arouca': 79.7, 'Rio Ave': 78.1,
+        'Alverca': 78.6, 'Casa Pia': 77.3, 'Nacional': 77.4,
+        'Estrela': 75.9, 'Tondela': 76.9, 'AVS': 75.5,
     }
 
 # ============================================
