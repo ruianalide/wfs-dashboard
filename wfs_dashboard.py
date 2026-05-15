@@ -320,6 +320,7 @@ with st.sidebar:
             "🏆 League Standings",
             "📉 League Progression",
             "💸 Fines",
+            "🎰 Apostas",
             "👤 Members",
             "💬 Forum",
             "⚙️ Admin Panel",
@@ -368,6 +369,37 @@ if page == "📊 Overview":
         with col4:
             high_conf = len(df_next[df_next['confidence'] == 'High'])
             st.markdown(metric_card("HIGH CONFIDENCE", f"{high_conf}", "reliable picks"), unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # --- Awards from last GW ---
+        if not df_standings.empty:
+            latest_gw = int(df_standings['gameweek'].max())
+            last_gw_data = df_standings[df_standings['gameweek'] == latest_gw].copy()
+
+            if not last_gw_data.empty:
+                king = last_gw_data.loc[last_gw_data['gw_points'].idxmax()]
+                clown = last_gw_data.loc[last_gw_data['gw_points'].idxmin()]
+
+                col_award1, col_award2 = st.columns(2)
+                with col_award1:
+                    st.markdown(f"""
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;">
+                        <div style="font-size:40px;">👑</div>
+                        <div style="color:#64748b;font-size:12px;text-transform:uppercase;margin-top:8px;">Rei da Jornada {latest_gw}</div>
+                        <div style="color:#1e293b;font-size:20px;font-weight:700;margin-top:4px;">{king['team_name']}</div>
+                        <div style="color:#059669;font-size:16px;font-weight:600;">{int(king['gw_points'])} pts</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col_award2:
+                    st.markdown(f"""
+                    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;">
+                        <div style="font-size:40px;">🤡</div>
+                        <div style="color:#64748b;font-size:12px;text-transform:uppercase;margin-top:8px;">Palhaço da Jornada {latest_gw}</div>
+                        <div style="color:#1e293b;font-size:20px;font-weight:700;margin-top:4px;">{clown['team_name']}</div>
+                        <div style="color:#dc2626;font-size:16px;font-weight:600;">{int(clown['gw_points'])} pts</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
         st.markdown("---")
 
@@ -1251,6 +1283,78 @@ elif page == "💸 Fines":
                 <div style="width:60px;color:#fbbf24;font-weight:bold;">€{row['fine_amount']:.0f}</div>
             </div>
             """, unsafe_allow_html=True)
+
+# ============================================
+# PAGE: APOSTAS (Betting)
+# ============================================
+elif page == "🎰 Apostas":
+    st.markdown("""
+    <div class="main-header">
+        <h1>🎰 Apostas</h1>
+        <p>Quem vai ganhar a próxima jornada?</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    df_pred = load_predictions()
+    df_standings = load_league_standings()
+
+    if not df_standings.empty and not df_pred.empty:
+        next_gw = int(df_pred['gameweek'].min())
+        managers = sorted(df_standings['team_name'].unique())
+
+        st.subheader(f"🗳️ Quem vai ganhar a GW {next_gw}?")
+        st.caption("Vota no manager que achas que vai ter mais pontos nesta jornada.")
+
+        # Load existing votes
+        try:
+            df_votes = read_sql("SELECT * FROM betting_votes")
+        except Exception:
+            df_votes = pd.DataFrame()
+
+        # Check if user is logged in
+        user = st.session_state.get('logged_in_user')
+
+        if user:
+            # Check if already voted for this GW
+            user_voted = False
+            if not df_votes.empty:
+                user_gw_votes = df_votes[(df_votes['username'] == user) & (df_votes['gameweek'] == next_gw)]
+                if not user_gw_votes.empty:
+                    user_voted = True
+                    st.success(f"✅ Já votaste: **{user_gw_votes.iloc[0]['vote']}**")
+
+            if not user_voted:
+                selected = st.radio("O teu voto:", managers, key="bet_vote", label_visibility="collapsed")
+                if st.button("Votar 🗳️"):
+                    execute(
+                        "INSERT INTO betting_votes (username, gameweek, vote, created_at) VALUES (?, ?, ?, ?)",
+                        (user, next_gw, selected, datetime.now().isoformat())
+                    )
+                    st.rerun()
+
+            # Show current votes
+            if not df_votes.empty:
+                gw_votes = df_votes[df_votes['gameweek'] == next_gw]
+                if not gw_votes.empty:
+                    st.markdown("---")
+                    st.subheader("📊 Votos atuais")
+                    vote_counts = gw_votes['vote'].value_counts().reset_index()
+                    vote_counts.columns = ['Manager', 'Votos']
+                    total_votes = vote_counts['Votos'].sum()
+
+                    for _, row in vote_counts.iterrows():
+                        pct = row['Votos'] / total_votes * 100
+                        st.markdown(f"""
+                        <div style="display:flex;align-items:center;padding:8px 14px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                            <div style="flex:1;color:#1e293b;font-weight:bold;">{row['Manager']}</div>
+                            <div style="width:60px;color:#E10014;font-weight:700;">{int(row['Votos'])} votos</div>
+                            <div style="width:60px;color:#64748b;">{pct:.0f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+        else:
+            st.warning("Faz login no Forum para poderes votar.")
+    else:
+        st.info("Sem dados disponíveis.")
 
 # ============================================
 # PAGE: MEMBERS
