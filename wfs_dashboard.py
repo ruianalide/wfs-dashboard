@@ -1108,32 +1108,49 @@ elif page == "📉 League Progression":
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # Points progression
+        # GWs won per manager
         st.markdown("---")
-        st.subheader("📊 Total Points Progression")
+        st.subheader("🏅 Gameweeks Won")
 
-        fig2 = go.Figure()
-        for idx, team in enumerate(teams):
-            team_data = df_rankings[df_rankings['team_name'] == team].sort_values('gameweek')
-            fig2.add_trace(go.Scatter(
-                x=team_data['gameweek'],
-                y=team_data['cumulative_points'],
-                name=team,
-                mode='lines',
-                line=dict(color=colors_list[idx % len(colors_list)], width=2)
+        df_standings = load_league_standings()
+        if not df_standings.empty:
+            # For each GW, find who had the highest gw_points
+            gw_winners = df_standings.loc[
+                df_standings.groupby('gameweek')['gw_points'].idxmax()
+            ][['team_name', 'gameweek', 'gw_points']]
+
+            wins_count = gw_winners['team_name'].value_counts().reset_index()
+            wins_count.columns = ['Team', 'GWs Won']
+
+            # Include all teams, even those with 0 wins
+            all_teams = df_standings['team_name'].unique()
+            all_teams_df = pd.DataFrame({'Team': all_teams})
+            wins_count = all_teams_df.merge(wins_count, on='Team', how='left')
+            wins_count['GWs Won'] = wins_count['GWs Won'].fillna(0).astype(int)
+            wins_count = wins_count.sort_values('GWs Won', ascending=False)
+
+            fig_wins = go.Figure()
+            fig_wins.add_trace(go.Bar(
+                x=wins_count['Team'],
+                y=wins_count['GWs Won'],
+                marker_color='#E10014',
+                text=wins_count['GWs Won'],
+                textposition='outside'
             ))
+            fig_wins.update_layout(
+                plot_bgcolor='white', paper_bgcolor='white', font_color='#1e293b',
+                height=400, yaxis_title='GWs Won', xaxis_title=''
+            )
+            st.plotly_chart(fig_wins, use_container_width=True)
 
-        fig2.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font_color='#1e293b',
-            xaxis_title='Gameweek',
-            yaxis_title='Total Points',
-            legend=dict(bgcolor='#f8fafc', font=dict(size=13, color='#1e293b')),
-            height=500
-        )
-
-        st.plotly_chart(fig2, use_container_width=True)
+            # List view
+            for _, row in wins_count.iterrows():
+                st.markdown(f"""
+                <div style="display:flex;align-items:center;padding:8px 14px;margin:3px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div style="flex:1;color:#1e293b;font-weight:bold;">{row['Team']}</div>
+                    <div style="color:#E10014;font-weight:700;font-size:18px;">{int(row['GWs Won'])} 🏆</div>
+                </div>
+                """, unsafe_allow_html=True)
 
 # ============================================
 # PAGE: FINES
@@ -1150,6 +1167,21 @@ elif page == "💸 Fines":
     df_payments = load_fines_payments()
 
     if not df_fines.empty:
+        # Summary cards at the top
+        total_fines = df_fines['fine_amount'].sum()
+        total_paid = df_payments['amount_paid'].sum() if not df_payments.empty and 'amount_paid' in df_payments.columns else 0
+        beers = int(total_fines / 1.5)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown(metric_card("TOTAL MULTAS", f"€{total_fines:.0f}"), unsafe_allow_html=True)
+        with col2:
+            st.markdown(metric_card("TOTAL PAGO", f"€{total_paid:.0f}"), unsafe_allow_html=True)
+        with col3:
+            st.markdown(metric_card("🍺 CERVEJAS", f"{beers}", "a €1.50 cada"), unsafe_allow_html=True)
+
+        st.markdown("---")
+
         # Total fines per team
         st.subheader("💰 Total Fines")
         totals = df_fines.groupby('team_name')['fine_amount'].sum().sort_values(ascending=False).reset_index()
