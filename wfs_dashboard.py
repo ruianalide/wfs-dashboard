@@ -1139,7 +1139,8 @@ elif page == "📉 League Progression":
             ))
             fig_wins.update_layout(
                 plot_bgcolor='white', paper_bgcolor='white', font_color='#1e293b',
-                height=400, yaxis_title='GWs Won', xaxis_title=''
+                height=400, yaxis_title='GWs Won', xaxis_title='',
+                margin=dict(t=40)
             )
             st.plotly_chart(fig_wins, use_container_width=True)
 
